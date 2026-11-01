@@ -15,6 +15,7 @@ import type {
   OtpRequestResponse,
   Role,
   User,
+  VerifyOtpResponse,
 } from "../types";
 import {
   demoLoginApi,
@@ -43,7 +44,7 @@ interface AuthContextType {
     phone: string,
     code: string,
     options?: VerifyOtpOptions
-  ) => Promise<AuthResponse>;
+  ) => Promise<VerifyOtpResponse>;
   demoLogin: (role: Role) => Promise<AuthResponse>;
   resetDemo: () => Promise<DemoResetResponse>;
   logout: () => void;
@@ -133,7 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyOtp = useCallback(
     async (phone: string, code: string, options: VerifyOtpOptions = {}) => {
       const result = await verifyOtpApi({ phone, code, ...options });
-      saveSession(result);
+      if ("token" in result) {
+        saveSession(result);
+      }
       return result;
     },
     [saveSession]

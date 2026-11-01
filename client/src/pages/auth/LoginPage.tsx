@@ -34,6 +34,9 @@ export function LoginPage() {
   const returnTo = safeReturnTo(
     new URLSearchParams(location.search).get("returnTo")
   );
+  const signupSuffix = returnTo
+    ? `?returnTo=${encodeURIComponent(returnTo)}`
+    : "";
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -85,6 +88,17 @@ export function LoginPage() {
     setIsLoading(true);
     try {
       const result = await verifyOtp(phone, code);
+
+      if ("requiresProfile" in result) {
+        // The number is verified but has no account yet. Carry the code over
+        // so the signup page can ask for a name without another SMS.
+        navigate(`/register${signupSuffix}`, {
+          replace: true,
+          state: { pendingPhone: result.phone, pendingCode: code },
+        });
+        return;
+      }
+
       addToast("success", "Signed in successfully");
       const defaultDest =
         result.user.role === "CAPTAIN" ? "/captain/dashboard" : "/user";
@@ -105,10 +119,6 @@ export function LoginPage() {
     setResendIn(0);
     setError("");
   };
-
-  const signupSuffix = returnTo
-    ? `?returnTo=${encodeURIComponent(returnTo)}`
-    : "";
 
   return (
     <div>

@@ -381,16 +381,23 @@ Local development response (the `devOtp` field is never returned in production):
 }
 ```
 
-**Verify an existing account**
+**Verify a phone number**
 
 ```json
 { "phone": "+919876543210", "code": "123456" }
 ```
 
-**Create a new account**
+If the number already has an account, the response is `{ user, token, isNew: false }`.
 
-Add `name` and `role` (`USER` or `CAPTAIN`) to the verify request. The account is
-created only after the code is verified.
+If it is a new number, the code is validated but not consumed, and the response
+asks for a profile instead of creating the account:
+
+```json
+{ "requiresProfile": true, "phone": "+919876543210" }
+```
+
+Collect the name, then submit the same code again with `name` and `role`
+(`USER` or `CAPTAIN`):
 
 ```json
 {
@@ -401,8 +408,9 @@ created only after the code is verified.
 }
 ```
 
-A successful verification returns `{ user, token, isNew }`. Send the token as
-`Authorization: Bearer <token>`.
+The account is created only on this second request and the response is
+`{ user, token, isNew: true }`. The code stays valid until its normal expiry. Send
+the token as `Authorization: Bearer <token>`.
 
 OTP policy: 6 digits, 5-minute expiry, 30-second resend cooldown, 5 attempts per
 code, and 5 sends per number per hour. Codes are HMAC-hashed at rest, are single

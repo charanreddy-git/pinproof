@@ -6,6 +6,7 @@ import type {
   DemoResetResponse,
   OtpRequestResponse,
   Role,
+  VerifyOtpResponse,
 } from "../types";
 
 export async function fetchAuthModeApi(): Promise<AuthModeResponse> {
@@ -42,8 +43,8 @@ export async function verifyOtpApi(input: {
   code: string;
   name?: string;
   role?: Role;
-}): Promise<AuthResponse> {
-  const { data } = await api.post<ApiResponse<AuthResponse>>(
+}): Promise<VerifyOtpResponse> {
+  const { data } = await api.post<ApiResponse<VerifyOtpResponse>>(
     "/auth/otp/verify",
     input
   );

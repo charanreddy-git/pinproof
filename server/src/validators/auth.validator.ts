@@ -18,9 +18,6 @@ const phoneSchema = z
 
 export const requestOtpSchema = z.object({
   phone: phoneSchema,
-  // Only used when this number does not have an account yet.
-  name: nameSchema.optional(),
-  role: roleSchema.optional(),
 });
 
 export const verifyOtpSchema = z.object({

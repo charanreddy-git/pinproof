@@ -121,8 +121,10 @@ export class AuthService {
   }
 
   /**
-   * Verify a code and issue a JWT. If the phone is new, name + role are
-   * required and the account is created on this step.
+   * Verify a code and issue a JWT. For a new phone number, the first pass
+   * returns `requiresProfile` without consuming the code so the client can
+   * collect a name. The account is created when the same code is submitted
+   * again with the name and role.
    */
   static async verifyOtp(input: VerifyOtpInput) {
     const phone = normalizePhone(input.phone);
@@ -169,9 +171,11 @@ export class AuthService {
 
     if (!user) {
       if (!input.name || !input.role) {
-        throw ApiError.notFound(
-          "No account found for this number. Create an account to continue."
-        );
+        // The code is valid, but this number has no account yet. Keep the
+        // code unconsumed so the client can ask for a name and submit it
+        // with the same code. Nothing is created until both are provided.
+        logger.info("OTP verified; profile required", { phone });
+        return { requiresProfile: true as const, phone };
       }
 
       user = await prisma.user.create({

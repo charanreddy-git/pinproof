@@ -81,6 +81,17 @@ export interface AuthResponse {
   isNew?: boolean;
 }
 
+/**
+ * Returned when an OTP is valid but the phone number has no account yet.
+ * The code stays valid so it can be submitted again with a name and role.
+ */
+export interface SignupProfileRequired {
+  requiresProfile: true;
+  phone: string;
+}
+
+export type VerifyOtpResponse = AuthResponse | SignupProfileRequired;
+
 export interface OtpRequestResponse {
   expiresIn: number;
   resendAfter: number;
