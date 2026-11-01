@@ -1,9 +1,20 @@
 import api from "./api";
-import type { ApiResponse, Task, CreateTaskInput } from "../types";
+import type { ApiResponse, Coordinates, Task, CreateTaskInput } from "../types";
 
-export async function fetchTasks(filter?: string): Promise<Task[]> {
-  const params: Record<string, string> | undefined = filter ? { filter } : undefined;
-  const { data } = await api.get<ApiResponse<Task[]>>("/tasks", { params });
+export async function fetchTasks(
+  filter?: string,
+  location?: Coordinates
+): Promise<Task[]> {
+  const params: Record<string, string> = {};
+  if (filter) params.filter = filter;
+  if (location) {
+    params.latitude = String(location.latitude);
+    params.longitude = String(location.longitude);
+  }
+
+  const { data } = await api.get<ApiResponse<Task[]>>("/tasks", {
+    params: Object.keys(params).length > 0 ? params : undefined,
+  });
   return data.data;
 }
 

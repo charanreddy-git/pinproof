@@ -17,6 +17,7 @@ import {
   ShieldCheckIcon,
 } from "../../components";
 import { useTaskDetail, useStartTask, useAcceptTask, useGeolocation } from "../../hooks";
+import { getApiOrigin } from "../../utils/api";
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("en-IN", {
@@ -94,8 +95,7 @@ export function CaptainTaskDetail() {
     );
   }
 
-  const API_URL = import.meta.env.VITE_API_URL || "";
-  const baseUrl = API_URL.replace("/api", "");
+  const baseUrl = getApiOrigin();
   const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${task.targetLat},${task.targetLng}`;
 
   return (

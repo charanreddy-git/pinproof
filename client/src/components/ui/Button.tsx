@@ -24,19 +24,19 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClasses =
-    "inline-flex items-center justify-center rounded-xl font-bold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-50 disabled:opacity-50 disabled:pointer-events-none cursor-pointer no-underline whitespace-nowrap active:translate-y-px";
+    "inline-flex items-center justify-center rounded-lg font-semibold tracking-normal transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-50 disabled:opacity-50 disabled:pointer-events-none cursor-pointer no-underline whitespace-nowrap";
 
   const variantClasses = {
     primary:
-      "bg-primary-800 text-white shadow-sm hover:bg-primary-900 hover:shadow-md",
+      "bg-primary-800 text-white hover:bg-primary-900",
     accent:
-      "bg-accent-400 text-primary-950 shadow-[0_5px_0_#d29500] hover:bg-accent-300 hover:shadow-[0_4px_0_#d29500] active:translate-y-0.5 active:shadow-[0_2px_0_#d29500]",
+      "bg-accent-400 text-primary-950 hover:bg-accent-300 active:bg-accent-500",
     secondary:
-      "bg-white text-primary-900 border-2 border-surface-200 hover:border-primary-700 hover:bg-primary-50/40",
+      "bg-white text-primary-900 border border-surface-300 hover:border-primary-700 hover:bg-primary-50/40",
     inverse:
-      "bg-white text-primary-950 shadow-sm hover:bg-accent-50",
+      "bg-white text-primary-950 hover:bg-accent-50",
     danger:
-      "bg-danger-600 text-white shadow-sm hover:bg-danger-700",
+      "bg-danger-600 text-white hover:bg-danger-700",
     ghost:
       "text-surface-600 hover:text-primary-900 hover:bg-surface-100",
   };

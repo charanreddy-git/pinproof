@@ -8,6 +8,12 @@ import { logger } from "./utils";
 
 const app = express();
 
+// Render terminates TLS at its proxy. Trust the first hop so rate limiting and
+// request logging see the real client IP instead of the proxy address.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 // CORS
 app.use(
   cors({

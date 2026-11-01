@@ -84,7 +84,7 @@ export function DemoToolbar() {
   return (
     <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] left-3 z-[90] sm:bottom-4 sm:left-4">
       {open ? (
-        <div className="w-[300px] overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-elevated animate-scale-in">
+        <div className="w-[calc(100vw-1.5rem)] max-w-[300px] overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-elevated animate-scale-in">
           <div className="flex items-center justify-between gap-3 bg-primary-900 px-3.5 py-3 text-white">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-accent-400" aria-hidden="true" />

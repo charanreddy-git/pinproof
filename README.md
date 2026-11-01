@@ -42,6 +42,7 @@ visits, and mobile-first flows that work on a phone.
 ## Features
 
 - Phone-first OTP sign-in — no password, verified mobile number, Rapido/Uber-style flow
+- Fast2SMS delivery with Quick SMS, DLT, and DLT Manual routes
 - Optional one-click demo mode for local testing (development only, server-enforced)
 - Google Maps link parsing (including shortened links) with a tap-to-place map fallback
 - "Use my current location" shortcut
@@ -51,7 +52,8 @@ visits, and mobile-first flows that work on a phone.
 - Photo evidence (JPG/PNG, 5 MB max), stored locally and served from `/uploads`
 - GPS coordinates, accuracy, capture time, and submission time stored with each proof
 - Role-protected dashboards and task-level access control
-- Responsive marketing site, pricing page, and inspector signup
+- Nearby visit discovery: inspectors see open requests within 7 km of their current location
+- Responsive marketing site, pricing section, and inspector signup
 - Route-aware page titles and accessible focus/tap states
 
 ---
@@ -61,12 +63,18 @@ visits, and mobile-first flows that work on a phone.
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query |
+| Typography | Mukta + Karma, self-hosted through Fontsource |
 | Maps | Leaflet + React Leaflet, OpenStreetMap tiles |
 | Backend | Node.js, Express 5, TypeScript |
 | Database | PostgreSQL with Prisma ORM |
 | Realtime | Socket.IO |
-| Auth | Mobile OTP + JWT (Bearer token); pluggable SMS provider |
+| Auth | Mobile OTP + JWT (Bearer token); Fast2SMS, Twilio, or webhook delivery |
 | Uploads | Multer, local `server/uploads` directory |
+
+Mukta (Ek Type, Mumbai) carries body copy and UI labels; Karma (Indian Type
+Foundry) carries display headings. Both are multi-script families with
+Devanagari and Latin support, chosen for open counters and comfortable reading on
+budget Android screens. Fonts are bundled, not fetched from Google Fonts.
 
 ### Architecture
 
@@ -145,7 +153,8 @@ Edit `server/.env`:
 - `DATABASE_URL` — your PostgreSQL connection string
 - `JWT_SECRET` — a random string of at least 32 characters
 - `CLIENT_URL` — the client origin (`http://localhost:5173` in development)
-- `SMS_PROVIDER` — `console` for local development, or `twilio` / `webhook` for production
+- `SMS_PROVIDER` — `console` for local development, or `fast2sms` / `twilio` / `webhook` for production
+- `FAST2SMS_API_KEY` — Fast2SMS Dev API key when `SMS_PROVIDER=fast2sms`
 
 Generate a secret:
 
@@ -259,6 +268,9 @@ Serve `client/dist` from any static host and point `VITE_API_URL` / `VITE_WS_URL
 at the API. Make sure `CLIENT_URL` on the server matches the deployed client origin
 so CORS and Socket.IO handshakes succeed.
 
+For a complete deployment walkthrough (Cloudflare Pages + Render + Neon + Fast2SMS),
+see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ---
 
 ## Environment variables
@@ -269,14 +281,22 @@ so CORS and Socket.IO handshakes succeed.
 | `JWT_SECRET` | `server/.env` | Yes | Signing secret, 32+ characters |
 | `JWT_EXPIRES_IN` | `server/.env` | No | Token lifetime (default `7d`) |
 | `AUTH_MODE` | `server/.env` | No | `otp` (default) or `demo`; demo is rejected when `NODE_ENV=production` |
-| `SMS_PROVIDER` | `server/.env` | No | `console` (development), `twilio`, or `webhook` |
+| `SMS_PROVIDER` | `server/.env` | No | `console` (development), `fast2sms`, `twilio`, or `webhook` |
 | `OTP_SECRET` | `server/.env` | No | OTP HMAC secret; defaults to `JWT_SECRET` |
 | `OTP_TTL_SECONDS` | `server/.env` | No | Code lifetime (default `300`) |
 | `OTP_RESEND_SECONDS` | `server/.env` | No | Per-number resend cooldown (default `30`) |
 | `OTP_MAX_SENDS_PER_HOUR` | `server/.env` | No | Per-number hourly send cap (default `5`) |
-| `TWILIO_ACCOUNT_SID` | `server/.env` | For Twilio | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | `server/.env` | For Twilio | Twilio auth token |
-| `TWILIO_FROM_NUMBER` | `server/.env` | For Twilio | Sender number or messaging service |
+| `FAST2SMS_API_KEY` | `server/.env` | For Fast2SMS | Dev API key from the Fast2SMS dashboard |
+| `FAST2SMS_ROUTE` | `server/.env` | No | `q` (default), `dlt`, or `dlt_manual` |
+| `FAST2SMS_SENDER_ID` | `server/.env` | For DLT routes | DLT-approved 3–6 character sender ID |
+| `FAST2SMS_MESSAGE_ID` | `server/.env` | For `dlt` | Numeric DLT Message ID |
+| `FAST2SMS_VARIABLES_VALUES` | `server/.env` | No | Values for `{#var#}`; `{code}` becomes the OTP (default `{code}`) |
+| `FAST2SMS_MESSAGE_TEMPLATE` | `server/.env` | For `dlt_manual` | Full DLT-approved message; `{code}` becomes the OTP |
+| `FAST2SMS_TEMPLATE_ID` | `server/.env` | No | DLT content template ID for `dlt_manual` |
+| `FAST2SMS_ENTITY_ID` | `server/.env` | No | DLT principal entity ID for `dlt_manual` |
+| `TWILIO_ACCOUNT_SID` | `server/.env` | For Twilio | Twilio account SID (optional provider) |
+| `TWILIO_AUTH_TOKEN` | `server/.env` | For Twilio | Twilio auth token (optional provider) |
+| `TWILIO_FROM_NUMBER` | `server/.env` | For Twilio | Sender number (optional provider) |
 | `TWILIO_MESSAGING_SERVICE_SID` | `server/.env` | For Twilio | Alternative to `TWILIO_FROM_NUMBER` |
 | `SMS_WEBHOOK_URL` | `server/.env` | For webhook | Receives `{ phone, code, message }` |
 | `SMS_WEBHOOK_TOKEN` | `server/.env` | No | Bearer token for the SMS webhook |
@@ -285,6 +305,45 @@ so CORS and Socket.IO handshakes succeed.
 | `CLIENT_URL` | `server/.env` | No | Allowed client origin (default `http://localhost:5173`) |
 | `VITE_API_URL` | `client/.env` | No | API base including `/api` (default `/api`) |
 | `VITE_WS_URL` | `client/.env` | No | Socket.IO origin (default same origin) |
+
+---
+
+## SMS delivery with Fast2SMS
+
+`SMS_PROVIDER=fast2sms` uses the [Fast2SMS Bulk V2 API](https://docs.fast2sms.com/reference/quick-sms-post).
+The API key is sent in the `Authorization` header. Fast2SMS accepts Indian
+10-digit mobile numbers, so `+91` is stripped before sending.
+
+| Route | Sends | Required configuration |
+|---|---|---|
+| `q` (Quick SMS) | The OTP message as plain text | `FAST2SMS_API_KEY` |
+| `dlt` | An approved DLT template by Message ID | `FAST2SMS_API_KEY`, `FAST2SMS_SENDER_ID`, `FAST2SMS_MESSAGE_ID` |
+| `dlt_manual` | The full approved DLT message | `FAST2SMS_API_KEY`, `FAST2SMS_SENDER_ID`, `FAST2SMS_MESSAGE_TEMPLATE` |
+
+Quick SMS example:
+
+```env
+SMS_PROVIDER=fast2sms
+FAST2SMS_API_KEY=your-api-key
+FAST2SMS_ROUTE=q
+```
+
+DLT example:
+
+```env
+SMS_PROVIDER=fast2sms
+FAST2SMS_API_KEY=your-api-key
+FAST2SMS_ROUTE=dlt
+FAST2SMS_SENDER_ID=PINPRF
+FAST2SMS_MESSAGE_ID=123456
+FAST2SMS_VARIABLES_VALUES={code}
+```
+
+- `{code}` is replaced with the generated OTP in `FAST2SMS_VARIABLES_VALUES`
+  and `FAST2SMS_MESSAGE_TEMPLATE`.
+- DLT and DLT Manual routes require DLT registration and an approved template.
+- Quick SMS may require account approval. Check the Fast2SMS dashboard.
+- OTP generation and verification stay in this app; the Fast2SMS OTP API is not used.
 
 ---
 
@@ -362,7 +421,7 @@ The `webhook` SMS provider receives:
 |--------|----------|--------|-------------|
 | `POST` | `/api/tasks/resolve-url` | User | Extract coordinates from a Google Maps link |
 | `POST` | `/api/tasks` | User | Create a visit request |
-| `GET` | `/api/tasks` | Both | User: own requests. Inspector: open + own accepted (`?filter=available` or `?filter=accepted`) |
+| `GET` | `/api/tasks` | Both | User: own requests. Inspector: nearby open + own accepted (`?filter=available` or `?filter=accepted`). Send `latitude` and `longitude` to see open visits within 7 km. |
 | `GET` | `/api/tasks/:id` | Both | Get one visit, subject to access rules |
 | `POST` | `/api/tasks/:id/accept` | Inspector | Claim an open visit |
 | `POST` | `/api/tasks/:id/start` | Inspector | Mark the visit as on the way |
@@ -419,10 +478,11 @@ truth — client-side checks are only there for early feedback.
   mounted volume instead. `/uploads` is currently public; switch to private objects
   with short-lived signed URLs before handling sensitive property photos.
 - **OTP delivery.** `SMS_PROVIDER=console` is development-only and is rejected in
-  production. For Indian SMS, Twilio requires DLT-registered sender and template
-  details; the generic `webhook` provider is intended for MSG91, Gupshup, Interakt,
-  or a WhatsApp adapter. Keep `OTP_SECRET` stable across restarts so pending codes
-  remain valid.
+  production. Fast2SMS is the recommended provider for India. Use `FAST2SMS_ROUTE=dlt`
+  or `dlt_manual` with a DLT-registered sender and template for production traffic;
+  `q` is Quick SMS and depends on Fast2SMS account approval. The generic `webhook`
+  provider is intended for MSG91, Gupshup, Interakt, or a WhatsApp adapter. Keep
+  `OTP_SECRET` stable across restarts so pending codes remain valid.
 - **Rate limits are in-process.** The per-IP OTP limits and the per-number send
   window use the database plus in-memory counters. Use a shared store such as Redis
   when running more than one API instance.

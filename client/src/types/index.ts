@@ -1,6 +1,11 @@
 export type Role = "USER" | "CAPTAIN";
 export type AuthMode = "otp" | "demo";
 
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
 export interface DemoAccount {
   role: Role;
   name: string;
@@ -55,6 +60,8 @@ export interface Task {
   createdBy: TaskUser;
   acceptedBy: TaskUser | null;
   locationLogs?: LocationLog[];
+  /** Present on open visits returned to a captain with their coordinates. */
+  distanceKm?: number;
   createdAt: string;
   updatedAt: string;
 }

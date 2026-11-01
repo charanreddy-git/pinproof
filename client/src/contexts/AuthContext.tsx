@@ -36,6 +36,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   authMode: AuthMode;
+  authModeReady: boolean;
   demoAccounts: DemoAccount[];
   requestOtp: (phone: string) => Promise<OtpRequestResponse>;
   verifyOtp: (
@@ -81,6 +82,7 @@ function readSavedSession(): AuthSession {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession>(readSavedSession);
   const [authMode, setAuthMode] = useState<AuthMode>("otp");
+  const [authModeReady, setAuthModeReady] = useState(false);
   const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
   const { user, token } = session;
 
@@ -94,11 +96,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setAuthMode(result.mode);
         setDemoAccounts(result.demo);
+        setAuthModeReady(true);
       })
       .catch(() => {
         if (!active) return;
         setAuthMode("otp");
         setDemoAccounts([]);
+        setAuthModeReady(true);
       });
 
     return () => {
@@ -162,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!token && !!user,
         isLoading: false,
         authMode,
+        authModeReady,
         demoAccounts,
         requestOtp,
         verifyOtp,

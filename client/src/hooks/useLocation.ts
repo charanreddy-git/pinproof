@@ -30,6 +30,26 @@ export function useGeolocation() {
     });
   }, []);
 
+  const requestLocation = useCallback(async (): Promise<GeolocationPosition | null> => {
+    try {
+      const position = await getCurrentPosition();
+      const { latitude, longitude } = position.coords;
+      setState((prev) => ({
+        ...prev,
+        latitude,
+        longitude,
+        error: null,
+      }));
+      return position;
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Location error",
+      }));
+      return null;
+    }
+  }, [getCurrentPosition]);
+
   const startTracking = useCallback(
     (taskId: string, intervalMs = 5000) => {
       setState((prev) => ({ ...prev, isTracking: true }));
@@ -65,5 +85,5 @@ export function useGeolocation() {
     [getCurrentPosition]
   );
 
-  return { ...state, getCurrentPosition, startTracking };
+  return { ...state, getCurrentPosition, requestLocation, startTracking };
 }

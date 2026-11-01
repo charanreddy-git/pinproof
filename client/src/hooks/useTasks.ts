@@ -8,12 +8,22 @@ import {
   submitTask,
   completeTask,
 } from "../services/task.service";
-import type { CreateTaskInput } from "../types";
+import type { Coordinates, CreateTaskInput } from "../types";
 
-export function useTaskList(filter?: string) {
+export function useTaskList(
+  filter?: string,
+  location?: Coordinates,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
-    queryKey: ["tasks", filter],
-    queryFn: () => fetchTasks(filter),
+    queryKey: [
+      "tasks",
+      filter ?? null,
+      location?.latitude ?? null,
+      location?.longitude ?? null,
+    ],
+    queryFn: () => fetchTasks(filter, location),
+    enabled: options?.enabled ?? true,
   });
 }
 

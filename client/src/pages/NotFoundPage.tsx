@@ -4,7 +4,7 @@ import { CompassIcon, MapPinIcon, ShieldCheckIcon } from "../components/Icons";
 
 const HELPFUL_LINKS = [
   { label: "How PinProof works", to: "/#how-it-works" },
-  { label: "Pricing", to: "/pricing" },
+  { label: "Pricing", to: "/#pricing" },
   { label: "For inspectors", to: "/captain" },
   { label: "Sign in", to: "/login" },
 ];
@@ -16,7 +16,7 @@ export function NotFoundPage() {
         <Logo />
         <Link
           to="/"
-          className="inline-flex min-h-11 items-center rounded-full px-3 text-[12.5px] font-semibold text-surface-600 transition-colors hover:bg-white hover:text-surface-950"
+          className="inline-flex min-h-11 items-center px-2 text-[12.5px] font-semibold text-surface-600 transition-colors hover:text-surface-950"
         >
           Back to home
           <span aria-hidden="true" className="ml-1.5">
@@ -27,23 +27,17 @@ export function NotFoundPage() {
 
       <main className="flex flex-1 items-center justify-center px-4 pb-16 pt-6 sm:px-6">
         <div className="w-full max-w-lg animate-slide-up text-center">
-          <div className="relative mx-auto flex h-28 w-28 items-center justify-center">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 rounded-[2rem] bg-accent-200/70 rotate-6"
-            />
-            <span className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-white shadow-card">
-              <MapPinIcon size={38} className="text-primary-700" />
-            </span>
+          <div className="crosshair mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-surface-300 bg-white">
+            <MapPinIcon size={36} className="text-primary-700" />
           </div>
 
-          <p className="mt-7 text-[12px] font-bold text-primary-700">
+          <p className="eyebrow mt-7 text-primary-700">
             Page not found
           </p>
-          <h1 className="mt-2 text-[2.2rem] font-extrabold leading-[1.05] tracking-[-0.04em] text-surface-950 sm:text-[2.7rem]">
+          <h1 className="mt-2 text-[2.1rem] leading-[1.12] text-surface-950 sm:text-[2.6rem]">
             This page has moved on.
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-[13.5px] leading-[1.7] text-surface-600">
+          <p className="mx-auto mt-3 max-w-md text-[14px] leading-[1.7] text-surface-600">
             The link may be old or mistyped. Your visits and proof are safe —
             head back home or book a property visit.
           </p>
@@ -57,8 +51,8 @@ export function NotFoundPage() {
             </Button>
           </div>
 
-          <div className="mt-11 rounded-2xl border border-surface-200 bg-white p-4 text-left shadow-sm">
-            <p className="flex items-center gap-1.5 text-[11.5px] font-bold text-surface-700">
+          <div className="mt-11 border-l-2 border-primary-700 bg-white px-4 py-4 text-left">
+            <p className="flex items-center gap-1.5 text-[12px] font-bold text-surface-700">
               <CompassIcon size={14} className="text-primary-600" />
               Looking for something?
             </p>
@@ -67,7 +61,7 @@ export function NotFoundPage() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="group flex min-h-11 items-center justify-between gap-2 py-2 text-[12.5px] font-semibold text-surface-700 transition-colors hover:text-primary-800"
+                  className="group flex min-h-11 items-center justify-between gap-2 py-2 text-[13px] font-semibold text-surface-700 transition-colors hover:text-primary-800"
                 >
                   {link.label}
                   <span

@@ -38,6 +38,11 @@ function visitReference(task: Task): string {
   return `#${task.id.slice(-5).toUpperCase()}`;
 }
 
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m away`;
+  return `${km.toFixed(1)} km away`;
+}
+
 export function TaskTable({
   tasks,
   basePath,
@@ -105,6 +110,12 @@ export function TaskTable({
                 <span className="text-surface-300" aria-hidden="true">·</span>
               )}
               <span>{formatTaskTime(task.createdAt)}</span>
+              {typeof task.distanceKm === "number" && (
+                <>
+                  <span className="text-surface-300" aria-hidden="true">·</span>
+                  <span>{formatDistance(task.distanceKm)}</span>
+                </>
+              )}
             </div>
           </div>
 

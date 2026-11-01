@@ -14,10 +14,22 @@ export const submitTaskSchema = z.object({
   capturedAt: z.string().datetime({ offset: true }).optional(),
 });
 
-export const taskFilterSchema = z
-  .enum(["available", "accepted"])
-  .optional();
+export const taskQuerySchema = z
+  .object({
+    filter: z.enum(["available", "accepted"]).optional(),
+    latitude: z.coerce.number().min(-90).max(90).optional(),
+    longitude: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .refine(
+    (query) =>
+      (query.latitude === undefined) === (query.longitude === undefined),
+    {
+      message: "latitude and longitude must be provided together",
+      path: ["latitude"],
+    }
+  );
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type SubmitTaskInput = z.infer<typeof submitTaskSchema>;
+export type TaskQueryInput = z.infer<typeof taskQuerySchema>;
 

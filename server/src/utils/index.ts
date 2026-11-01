@@ -9,7 +9,11 @@ export {
   OTP_MAX_SENDS_PER_HOUR,
   OTP_MAX_ATTEMPTS,
 } from "./otp";
-export { haversineDistance, MAX_DISTANCE_METERS } from "./haversine";
+export {
+  CAPTAIN_DISCOVERY_RADIUS_KM,
+  haversineDistance,
+  MAX_DISTANCE_METERS,
+} from "./haversine";
 export { signToken, verifyToken } from "./jwt";
 export type { JwtPayload } from "./jwt";
 export { logger } from "./logger";

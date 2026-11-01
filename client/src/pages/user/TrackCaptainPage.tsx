@@ -77,7 +77,7 @@ export function TrackCaptainPage() {
           taskId={task.id}
           targetLat={task.targetLat}
           targetLng={task.targetLng}
-          height="calc(100dvh - 400px)"
+          height="clamp(280px, calc(100dvh - 400px), 560px)"
         />
       </div>
 

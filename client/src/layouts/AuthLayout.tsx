@@ -23,52 +23,35 @@ const STEPS = [
 export function AuthLayout() {
   return (
     <div className="min-h-dvh bg-surface-50 lg:grid lg:grid-cols-[0.92fr_1.08fr]">
-      <aside className="relative hidden overflow-hidden bg-primary-950 px-10 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-14 xl:py-12">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-primary-800/70"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-primary-900"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-10 top-24 h-24 w-24 rounded-full border-2 border-accent-400/40"
-        />
-
+      <aside className="survey-grid-dark relative hidden overflow-hidden bg-primary-950 px-10 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-14 xl:py-12">
         <div className="relative">
           <Logo size="md" variant="inverse" />
-          <h2 className="mt-12 max-w-sm text-[2.6rem] font-extrabold leading-[1.02] tracking-[-0.045em] xl:text-[3.1rem]">
+          <h2 className="mt-12 max-w-sm text-[2.5rem] leading-[1.12] xl:text-[3rem]">
             Proof,
             <br />
             without the
             <br />
             <span className="text-accent-400">long trip.</span>
           </h2>
-          <p className="mt-5 max-w-xs text-[13.5px] leading-relaxed text-primary-200">
+          <p className="mt-5 max-w-xs text-[14px] leading-relaxed text-primary-200">
             Book a local inspector in minutes. Get a dated, GPS-verified photo
             of your property — wherever you are.
           </p>
 
-          <div className="mt-7 flex flex-wrap gap-2">
-            <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-primary-100">
-              From ₹999
-            </span>
-            <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-primary-100">
-              No app needed
-            </span>
-            <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-primary-100">
-              UPI-friendly
-            </span>
-          </div>
+          <p className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-semibold text-primary-100">
+            <span>From ₹999</span>
+            <span aria-hidden="true" className="text-primary-500">·</span>
+            <span>No app needed</span>
+            <span aria-hidden="true" className="text-primary-500">·</span>
+            <span>UPI-friendly</span>
+          </p>
         </div>
 
-        <div className="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm">
+        <div className="relative mt-10 rounded-xl border border-white/10 bg-white/[0.04] p-4">
           <div className="space-y-3">
             {STEPS.map(({ icon: Icon, title, detail }, index) => (
               <div key={title} className="flex items-start gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent-400 text-primary-950">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-accent-400 text-primary-950">
                   <Icon size={15} />
                 </span>
                 <div className="min-w-0">
@@ -82,7 +65,7 @@ export function AuthLayout() {
             ))}
           </div>
           <p className="mt-4 border-t border-white/10 pt-3 text-[10.5px] font-medium text-primary-300">
-            100 m GPS check · private proof · visits across India
+            100 m GPS check · private proof · built for India
           </p>
         </div>
       </aside>
@@ -97,7 +80,7 @@ export function AuthLayout() {
           </p>
           <Link
             to="/"
-            className="inline-flex min-h-11 items-center rounded-full px-3 text-[12px] font-semibold text-surface-600 transition-colors hover:bg-surface-100 hover:text-surface-950"
+            className="inline-flex min-h-11 items-center px-2 text-[12px] font-semibold text-surface-600 transition-colors hover:text-surface-950"
           >
             Back to home
             <span aria-hidden="true" className="ml-1.5">↗</span>
@@ -105,7 +88,7 @@ export function AuthLayout() {
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4 pb-12 pt-2 sm:px-8">
-          <div className="w-full max-w-[460px] animate-slide-up rounded-3xl border border-surface-200 bg-white p-5 shadow-card sm:p-7">
+          <div className="w-full max-w-[460px] animate-slide-up rounded-2xl border border-surface-200 bg-white p-5 shadow-card sm:p-7">
             <Outlet />
           </div>
         </div>

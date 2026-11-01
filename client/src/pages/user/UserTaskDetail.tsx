@@ -16,6 +16,7 @@ import {
 import { useTaskDetail, useCompleteTask, useTaskUpdates } from "../../hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TaskStatus } from "../../types";
+import { getApiOrigin } from "../../utils/api";
 import { STATUS_ORDER, TASK_STEPS, visitRef } from "../../utils/task";
 
 function formatDateTime(value: string): string {
@@ -81,8 +82,7 @@ export function UserTaskDetail() {
     }
   };
 
-  const API_URL = import.meta.env.VITE_API_URL || "";
-  const baseUrl = API_URL.replace("/api", "");
+  const baseUrl = getApiOrigin();
   const currentStep = STATUS_ORDER[task.status];
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${task.targetLat},${task.targetLng}`;
 

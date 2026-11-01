@@ -20,7 +20,7 @@ import {
   CaptainLandingPage,
 } from "./pages/captain";
 import { RequesterLandingPage } from "./pages/verify";
-import { LandingPage, PricingPage, NotFoundPage } from "./pages";
+import { LandingPage, NotFoundPage } from "./pages";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +45,6 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/verify" element={<RequesterLandingPage />} />
                 <Route path="/captain" element={<CaptainLandingPage />} />
-                <Route path="/pricing" element={<PricingPage />} />
                 <Route element={<AuthLayout />}>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />

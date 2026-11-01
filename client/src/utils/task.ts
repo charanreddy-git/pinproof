@@ -1,5 +1,8 @@
 import type { TaskStatus } from "../types";
 
+/** Must match the server's CAPTAIN_DISCOVERY_RADIUS_KM. */
+export const CAPTAIN_DISCOVERY_RADIUS_KM = 7;
+
 export const TASK_STEPS: {
   status: TaskStatus;
   label: string;

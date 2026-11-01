@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { unlink } from "node:fs/promises";
 import { TaskService } from "../services";
-import { createTaskSchema, submitTaskSchema, taskFilterSchema } from "../validators";
+import { createTaskSchema, submitTaskSchema, taskQuerySchema } from "../validators";
 import { ApiError, logger, resolveGoogleMapsUrl } from "../utils";
 import { getIO } from "../sockets";
 
@@ -37,11 +37,17 @@ export class TaskController {
 
   static async getTasks(req: Request, res: Response, next: NextFunction) {
     try {
-      const filter = taskFilterSchema.parse(req.query.filter);
+      const query = taskQuerySchema.parse(req.query);
+      const location =
+        query.latitude !== undefined && query.longitude !== undefined
+          ? { latitude: query.latitude, longitude: query.longitude }
+          : undefined;
+
       const tasks = await TaskService.getTasks(
         req.user!.userId,
         req.user!.role,
-        filter
+        query.filter,
+        location
       );
       res.status(200).json({ success: true, data: tasks });
     } catch (error) {

@@ -27,7 +27,7 @@ export function Card({
       id={id}
       className={`
         rounded-2xl border border-surface-200 bg-white shadow-card
-        ${hover ? "transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-card-hover" : ""}
+        ${hover ? "transition-colors duration-150 hover:border-primary-300 hover:shadow-card-hover" : ""}
         ${paddingClasses[padding]}
         ${className}
       `}

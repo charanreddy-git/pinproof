@@ -28,3 +28,6 @@ export function haversineDistance(
 
 /** Maximum allowed distance (in meters) between captain and target */
 export const MAX_DISTANCE_METERS = 100;
+
+/** Radius (in kilometres) within which captains can discover open visits. */
+export const CAPTAIN_DISCOVERY_RADIUS_KM = 7;

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   TaskTable,
@@ -6,15 +7,23 @@ import {
   VisitProgress,
 } from "../../components";
 import { useAuth } from "../../contexts";
-import { useTaskList } from "../../hooks";
+import { useGeolocation, useTaskList } from "../../hooks";
 import {
   ArrowRightIcon,
   ClipboardIcon,
   MapPinIcon,
+  NavigationIcon,
+  RefreshCwIcon,
   SearchIcon,
 } from "../../components/Icons";
-import { visitRef } from "../../utils/task";
-import type { Task } from "../../types";
+import { CAPTAIN_DISCOVERY_RADIUS_KM, visitRef } from "../../utils/task";
+import type { Coordinates, Task } from "../../types";
+
+/** Fixed location for demo mode so the prepared Bengaluru visits stay visible. */
+const DEMO_CAPTAIN_LOCATION: Coordinates = {
+  latitude: 12.9698,
+  longitude: 77.7499,
+};
 
 function activeCopy(task: Task): {
   eyebrow: string;
@@ -96,12 +105,56 @@ function ActiveVisitCard({ task }: { task: Task }) {
 }
 
 export function CaptainDashboard() {
-  const { data: allTasks, isLoading: loadingAll } = useTaskList();
-  const { data: availableTasks, isLoading: loadingAvailable } =
-    useTaskList("available");
-  const { user } = useAuth();
+  const { user, authMode, authModeReady } = useAuth();
+  const {
+    latitude,
+    longitude,
+    error: locationError,
+    requestLocation,
+  } = useGeolocation();
+  const [isLocating, setIsLocating] = useState(true);
 
-  if (loadingAll || loadingAvailable) return <PageLoader />;
+  const location = useMemo<Coordinates | undefined>(() => {
+    // Demo mode always uses the prepared Bengaluru location so the sample
+    // visits stay visible regardless of where the reviewer is.
+    if (authMode === "demo") return DEMO_CAPTAIN_LOCATION;
+    if (latitude !== null && longitude !== null) {
+      return { latitude, longitude };
+    }
+    return undefined;
+  }, [latitude, longitude, authMode]);
+
+  const refreshLocation = useCallback(async () => {
+    setIsLocating(true);
+    try {
+      await requestLocation();
+    } finally {
+      setIsLocating(false);
+    }
+  }, [requestLocation]);
+
+  const hasRequestedLocation = useRef(false);
+
+  useEffect(() => {
+    if (!authModeReady || authMode === "demo") return;
+    if (hasRequestedLocation.current) return;
+    hasRequestedLocation.current = true;
+    void refreshLocation();
+  }, [authMode, authModeReady, refreshLocation]);
+
+  const locating = isLocating && authMode !== "demo";
+
+  const { data: allTasks, isLoading: loadingAll } = useTaskList(
+    undefined,
+    location
+  );
+  const { data: availableTasks, isLoading: loadingAvailable } = useTaskList(
+    "available",
+    location,
+    { enabled: !!location }
+  );
+
+  if (loadingAll || (location && loadingAvailable)) return <PageLoader />;
 
   const tasks = allTasks || [];
   const available = availableTasks || [];
@@ -117,8 +170,11 @@ export function CaptainDashboard() {
   const extraActive = activeTasks.length - (featuredTask ? 1 : 0);
 
   const subtitle = (() => {
+    if (!location) {
+      return `Turn on location to see visit requests within ${CAPTAIN_DISCOVERY_RADIUS_KM} km.`;
+    }
     if (available.length > 0) {
-      return `${available.length} request${available.length === 1 ? "" : "s"} nearby${
+      return `${available.length} request${available.length === 1 ? "" : "s"} within ${CAPTAIN_DISCOVERY_RADIUS_KM} km${
         activeTasks.length > 0
           ? ` · ${activeTasks.length} active`
           : ""
@@ -127,7 +183,7 @@ export function CaptainDashboard() {
     if (activeTasks.length > 0) {
       return `${activeTasks.length} active visit${activeTasks.length === 1 ? "" : "s"} · new requests appear here`;
     }
-    return "No open requests right now. New ones appear through the day.";
+    return `No open requests within ${CAPTAIN_DISCOVERY_RADIUS_KM} km right now. New ones appear through the day.`;
   })();
 
   return (
@@ -167,28 +223,78 @@ export function CaptainDashboard() {
       )}
 
       <section className={featuredTask ? "mt-6" : "mt-5"}>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-[1.25rem] font-extrabold tracking-[-0.03em] text-surface-950">
               Available near you
             </h2>
             <p className="mt-0.5 text-[11px] font-medium text-surface-500">
-              New requests appear automatically.
+              {location
+                ? `Open visits within ${CAPTAIN_DISCOVERY_RADIUS_KM} km, nearest first.`
+                : "Share your location to see visits close to you."}
             </p>
           </div>
-          <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-accent-100 px-2.5 py-1 text-[10.5px] font-bold text-accent-900">
-            <SearchIcon size={11} />
-            {available.length}
-          </span>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {location && authMode !== "demo" && (
+              <button
+                type="button"
+                onClick={() => void refreshLocation()}
+                disabled={locating}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-surface-200 bg-white px-2.5 text-[10.5px] font-bold text-surface-600 transition-colors hover:border-primary-200 hover:text-primary-800 disabled:opacity-60"
+              >
+                <RefreshCwIcon
+                  size={11}
+                  className={locating ? "animate-spin" : ""}
+                />
+                {locating ? "Updating" : "Update"}
+              </button>
+            )}
+            <span className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-accent-100 px-2.5 py-1 text-[10.5px] font-bold text-accent-900">
+              <SearchIcon size={11} />
+              {available.length}
+            </span>
+          </div>
         </div>
 
-        <TaskTable
-          tasks={available}
-          basePath="/captain/tasks"
-          showCreatedBy
-          emptyMessage="No requests nearby"
-          emptyDescription="Keep this page open — new visits appear here through the day."
-        />
+        {location ? (
+          <TaskTable
+            tasks={available}
+            basePath="/captain/tasks"
+            showCreatedBy
+            emptyMessage="No requests nearby"
+            emptyDescription={`No open visits within ${CAPTAIN_DISCOVERY_RADIUS_KM} km right now.`}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-surface-300 bg-white/60 px-5 py-10 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50">
+              <NavigationIcon size={24} className="text-primary-600" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-[16px] font-bold text-surface-900">
+                {locating
+                  ? "Finding your location…"
+                  : "Turn on location to see nearby visits"}
+              </p>
+              <p className="mx-auto max-w-xs text-[12.5px] leading-relaxed text-surface-500">
+                {locating
+                  ? `We only show open visits within ${CAPTAIN_DISCOVERY_RADIUS_KM} km of you.`
+                  : locationError
+                    ? "We couldn't access your location. Check your browser permissions and try again."
+                    : `We use your location only to show open visits within ${CAPTAIN_DISCOVERY_RADIUS_KM} km.`}
+              </p>
+            </div>
+            {!locating && (
+              <Button
+                onClick={() => void refreshLocation()}
+                variant="secondary"
+                size="sm"
+              >
+                <NavigationIcon size={14} />
+                Use my location
+              </Button>
+            )}
+          </div>
+        )}
       </section>
 
       {!featuredTask && available.length === 0 && (

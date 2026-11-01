@@ -15,34 +15,27 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
   const baseId = useId();
 
   return (
-    <div className="space-y-3">
+    <div className="divide-y divide-surface-200 border-y border-surface-200">
       {items.map((faq, index) => {
         const isOpen = activeIndex === index;
         const answerId = `${baseId}-answer-${index}`;
 
         return (
-          <div
-            key={faq.q}
-            className={`overflow-hidden rounded-2xl border bg-white transition-colors ${
-              isOpen ? "border-primary-200 shadow-card" : "border-surface-200"
-            }`}
-          >
+          <div key={faq.q}>
             <button
               type="button"
               onClick={() => setActiveIndex(isOpen ? null : index)}
               aria-expanded={isOpen}
               aria-controls={answerId}
-              className="flex min-h-14 w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
+              className="flex min-h-14 w-full items-center justify-between gap-4 px-1 py-4 text-left"
             >
-              <span className="text-[14.5px] font-bold leading-snug text-surface-950 sm:text-[15.5px]">
+              <span className="text-[15px] font-bold leading-snug text-surface-950 sm:text-[16px]">
                 {faq.q}
               </span>
               <span
                 aria-hidden="true"
-                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
-                  isOpen
-                    ? "rotate-180 bg-primary-800 text-white"
-                    : "bg-surface-100 text-surface-600"
+                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center transition-transform duration-200 ${
+                  isOpen ? "rotate-180 text-primary-700" : "text-surface-500"
                 }`}
               >
                 <ChevronDownIcon size={16} />
@@ -51,7 +44,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
             {isOpen && (
               <div
                 id={answerId}
-                className="border-t border-surface-100 px-4 pb-5 pt-3.5 text-[13.5px] leading-[1.7] text-surface-600 sm:px-5"
+                className="px-1 pb-5 pr-8 text-[14px] leading-[1.7] text-surface-600"
               >
                 {faq.a}
               </div>

@@ -11,13 +11,13 @@ interface MarketingFooterProps {
 export function MarketingFooter({
   variant = "primary",
   logoLabel = "PinProof",
-  tagline = "Local inspectors visit your property and send back a dated, GPS-verified photo — so you can decide without making the trip.",
+  tagline = "Independent inspectors visit your property and send back a dated, GPS-verified photo — so you can decide without making the trip.",
 }: MarketingFooterProps) {
   const footerLinks = {
     Explore: [
       { label: "How it works", to: "/#how-it-works" },
-      { label: "Pricing", to: "/pricing" },
-      { label: "Sample visit", to: "/verify" },
+      { label: "Pricing", to: "/#pricing" },
+      { label: "For property owners", to: "/verify" },
     ],
     "Your account": [
       { label: "Sign in", to: "/login" },
@@ -38,23 +38,21 @@ export function MarketingFooter({
             <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-surface-500">
               {tagline}
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-primary-800 shadow-sm">
-                <ShieldCheckIcon size={13} />
+            <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] font-semibold text-surface-600">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheckIcon size={13} className="text-primary-600" />
                 GPS-verified
               </span>
-              <span className="rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-surface-700 shadow-sm">
-                Made in India
-              </span>
-              <span className="rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-surface-700 shadow-sm">
-                UPI-friendly
-              </span>
+              <span aria-hidden="true" className="text-surface-300">·</span>
+              <span>Made in India</span>
+              <span aria-hidden="true" className="text-surface-300">·</span>
+              <span>UPI-friendly</span>
             </div>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h4 className="text-[12px] font-bold text-surface-500">{section}</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-surface-500">{section}</h4>
               <ul className="mt-3 space-y-1">
                 {links.map((link) => (
                   <li key={`${section}-${link.to}`}>
@@ -78,7 +76,7 @@ export function MarketingFooter({
             <span aria-hidden="true">·</span>
             <span>100 m GPS check</span>
             <span aria-hidden="true">·</span>
-            <span>Visits across India</span>
+            <span>Built for India</span>
           </p>
         </div>
       </div>

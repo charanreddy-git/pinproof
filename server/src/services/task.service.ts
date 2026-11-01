@@ -1,5 +1,10 @@
 import { prisma } from "../lib";
-import { ApiError, haversineDistance, MAX_DISTANCE_METERS } from "../utils";
+import {
+  ApiError,
+  CAPTAIN_DISCOVERY_RADIUS_KM,
+  haversineDistance,
+  MAX_DISTANCE_METERS,
+} from "../utils";
 import type { CreateTaskInput, SubmitTaskInput } from "../validators";
 import { TaskStatus } from "@prisma/client";
 
@@ -20,6 +25,7 @@ const taskWithUsers = {
 } as const;
 
 type TaskFilter = "available" | "accepted";
+type TaskLocation = { latitude: number; longitude: number };
 
 export class TaskService {
   /**
@@ -42,14 +48,15 @@ export class TaskService {
   /**
    * Get tasks filtered by role:
    * - USER: own created tasks
-   * - CAPTAIN "available": all OPEN tasks
+   * - CAPTAIN "available": OPEN tasks within the discovery radius
    * - CAPTAIN "accepted": own accepted tasks
-   * - CAPTAIN (no filter): OPEN tasks + own accepted tasks
+   * - CAPTAIN (no filter): nearby OPEN tasks + own accepted tasks
    */
   static async getTasks(
     userId: string,
     role: "USER" | "CAPTAIN",
-    filter?: TaskFilter
+    filter?: TaskFilter,
+    location?: TaskLocation
   ) {
     if (role === "USER") {
       return prisma.task.findMany({
@@ -60,11 +67,7 @@ export class TaskService {
     }
 
     if (filter === "available") {
-      return prisma.task.findMany({
-        where: { status: TaskStatus.OPEN },
-        include: { createdBy: publicUserSelect },
-        orderBy: { createdAt: "desc" },
-      });
+      return TaskService.findNearbyOpenTasks(location);
     }
 
     if (filter === "accepted") {
@@ -75,13 +78,9 @@ export class TaskService {
       });
     }
 
-    // Default: OPEN tasks (contact hidden) + own accepted tasks (contact visible)
+    // Default: nearby OPEN tasks (contact hidden) + own accepted tasks (contact visible)
     const [openTasks, acceptedTasks] = await Promise.all([
-      prisma.task.findMany({
-        where: { status: TaskStatus.OPEN },
-        include: { createdBy: publicUserSelect },
-        orderBy: { createdAt: "desc" },
-      }),
+      TaskService.findNearbyOpenTasks(location),
       prisma.task.findMany({
         where: { acceptedById: userId },
         include: taskWithUsers,
@@ -92,6 +91,48 @@ export class TaskService {
     return [...openTasks, ...acceptedTasks].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     );
+  }
+
+  /**
+   * Open tasks inside the captain discovery radius, nearest first.
+   * Captain coordinates come from the request; nothing is persisted.
+   */
+  private static async findNearbyOpenTasks(location?: TaskLocation) {
+    if (!location) return [];
+
+    const { latitude, longitude } = location;
+
+    // Cheap bounding-box prefilter, then exact Haversine distance. Use a
+    // conservative km-per-degree value so boundary visits are never excluded.
+    const KM_PER_DEGREE = 110;
+    const latDelta = CAPTAIN_DISCOVERY_RADIUS_KM / KM_PER_DEGREE;
+    const lngDelta =
+      CAPTAIN_DISCOVERY_RADIUS_KM /
+      (KM_PER_DEGREE * Math.max(Math.cos((latitude * Math.PI) / 180), 0.01));
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        status: TaskStatus.OPEN,
+        targetLat: { gte: latitude - latDelta, lte: latitude + latDelta },
+        targetLng: { gte: longitude - lngDelta, lte: longitude + lngDelta },
+      },
+      include: { createdBy: publicUserSelect },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return tasks
+      .map((task) => ({
+        ...task,
+        distanceKm:
+          haversineDistance(
+            latitude,
+            longitude,
+            task.targetLat,
+            task.targetLng
+          ) / 1000,
+      }))
+      .filter((task) => task.distanceKm <= CAPTAIN_DISCOVERY_RADIUS_KM)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
   }
 
   /**

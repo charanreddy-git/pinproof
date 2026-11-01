@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 const PAGE_TITLES: Record<string, string> = {
   "/": "PinProof — Property verification without the travel",
   "/verify": "Request a property visit — PinProof",
-  "/pricing": "Simple pricing — PinProof",
   "/captain": "Inspect properties near you — PinProof",
   "/login": "Sign in — PinProof",
   "/register": "Create your account — PinProof",
