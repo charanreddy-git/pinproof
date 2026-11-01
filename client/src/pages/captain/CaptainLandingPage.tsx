@@ -85,7 +85,7 @@ export function CaptainLandingPage() {
                 <span className="text-accent-400">Work your way.</span>
               </h1>
 
-              <p className="mt-4 max-w-[27rem] text-[15.5px] leading-[1.65] text-primary-200 sm:text-[16.5px]">
+              <p className="mt-4 max-w-[27rem] text-[17px] leading-[1.65] text-primary-200 sm:text-[17px]">
                 Check properties nearby. Get paid weekly.
               </p>
 
@@ -94,7 +94,7 @@ export function CaptainLandingPage() {
                   Start earning
                   <ArrowRightIcon size={17} />
                 </Button>
-                <p className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-primary-300 sm:justify-start">
+                <p className="flex items-center justify-center gap-1.5 text-[14.5px] font-semibold text-primary-300 sm:justify-start">
                   <CheckIcon size={13} className="text-accent-400" />
                   No joining fee · No fixed hours
                 </p>
@@ -114,27 +114,27 @@ export function CaptainLandingPage() {
               {VISIT_TYPES.map(({ name, payout, note, desc, popular }) => (
                 <div key={name} className="flex items-center justify-between gap-4 p-4">
                   <div>
-                    <p className="flex items-center gap-2 text-[13.5px] font-bold text-surface-950">
+                    <p className="flex items-center gap-2 text-[15px] font-bold text-surface-950">
                       {name}
                       {popular && (
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-accent-700">
+                        <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent-700">
                           Popular
                         </span>
                       )}
                     </p>
-                    <p className="mt-1 text-[11.5px] text-surface-500">{desc}</p>
+                    <p className="mt-1 text-[14px] text-surface-500">{desc}</p>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <p className="display-number text-[1.7rem] leading-none text-surface-950">
+                    <p className="display-number text-[1.85rem] leading-none text-surface-950">
                       ₹{payout}
                     </p>
-                    <p className="mt-1 text-[9.5px] font-semibold text-surface-500">{note}</p>
+                    <p className="mt-1 text-[12.5px] font-semibold text-surface-500">{note}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <p className="mt-3 text-[11.5px] leading-relaxed text-surface-500">
+            <p className="mt-3 text-[14px] leading-relaxed text-surface-500">
               Pay is listed before you accept. No deductions.
             </p>
           </div>
@@ -148,16 +148,16 @@ export function CaptainLandingPage() {
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {STEPS.map(([title, desc], index) => (
                 <div key={title} className="rounded-lg border border-surface-200 bg-white p-3.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-800 text-[11px] font-bold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-800 text-[12px] font-bold text-white">
                     {index + 1}
                   </span>
-                  <p className="mt-2.5 text-[12.5px] font-bold leading-snug text-surface-950">{title}</p>
-                  <p className="mt-0.5 text-[11px] leading-snug text-surface-500">{desc}</p>
+                  <p className="mt-2.5 text-[15px] font-bold leading-snug text-surface-950">{title}</p>
+                  <p className="mt-0.5 text-[13.5px] leading-snug text-surface-500">{desc}</p>
                 </div>
               ))}
             </div>
 
-            <p className="mt-5 border-t border-surface-300 pt-4 text-[11.5px] leading-relaxed text-surface-600">
+            <p className="mt-5 border-t border-surface-300 pt-4 text-[14px] leading-relaxed text-surface-600">
               <span className="font-bold text-surface-900">You need:</span> smartphone
               with GPS · working camera · bike, scooter, or car · mobile data
             </p>
@@ -179,7 +179,7 @@ export function CaptainLandingPage() {
           <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center lg:px-8">
             <div>
               <p className="eyebrow text-primary-800">Ready when you are</p>
-              <h2 className="mt-2 text-[1.7rem] leading-[1.12] text-primary-950 sm:text-[2rem]">
+              <h2 className="mt-2 text-[1.85rem] leading-[1.12] text-primary-950 sm:text-[2rem]">
                 Start earning nearby.
               </h2>
             </div>
@@ -190,7 +190,7 @@ export function CaptainLandingPage() {
               </Button>
               <Link
                 to="/verify"
-                className="text-[12px] font-semibold text-primary-900 underline underline-offset-4 hover:text-primary-950"
+                className="text-[14px] font-semibold text-primary-900 underline underline-offset-4 hover:text-primary-950"
               >
                 Need a visit instead?
               </Link>

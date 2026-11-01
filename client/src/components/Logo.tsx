@@ -8,9 +8,9 @@ interface LogoProps {
 }
 
 const sizeConfig = {
-  sm: { box: "h-9 w-9 rounded-xl", text: "text-[1.05rem]", tag: "text-[9px]" },
-  md: { box: "h-11 w-11 rounded-2xl", text: "text-[1.28rem]", tag: "text-[10px]" },
-  lg: { box: "h-14 w-14 rounded-2xl", text: "text-[1.6rem]", tag: "text-[11px]" },
+  sm: { box: "h-9 w-9 rounded-xl", text: "text-[1.05rem]", tag: "text-[10px]" },
+  md: { box: "h-11 w-11 rounded-2xl", text: "text-[1.28rem]", tag: "text-[10.5px]" },
+  lg: { box: "h-14 w-14 rounded-2xl", text: "text-[1.6rem]", tag: "text-[11.5px]" },
 };
 
 function Mark({

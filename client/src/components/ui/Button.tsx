@@ -42,9 +42,9 @@ export function Button({
   };
 
   const sizeClasses = {
-    sm: "h-10 px-4 text-[13px] gap-1.5",
-    md: "h-12 px-5 text-[14px] gap-2",
-    lg: "h-14 px-6 text-[15px] gap-2",
+    sm: "h-11 px-4 text-[14px] gap-1.5",
+    md: "h-12 px-5 text-[15px] gap-2",
+    lg: "h-14 px-6 text-[16px] gap-2",
   };
 
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;

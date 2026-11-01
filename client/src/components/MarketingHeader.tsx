@@ -71,7 +71,7 @@ export function MarketingHeader({
 
   const mobileLink = (item: NavItem) => {
     const active = isItemActive(item);
-    const className = `flex min-h-13 items-center justify-between border-l-2 px-4 py-3 text-[15px] font-semibold transition-colors ${
+    const className = `flex min-h-13 items-center justify-between border-l-2 px-4 py-3 text-[16px] font-semibold transition-colors ${
       active
         ? "border-primary-700 text-surface-950"
         : "border-transparent text-surface-800 hover:border-surface-300 hover:text-surface-950"
@@ -125,7 +125,7 @@ export function MarketingHeader({
         <div className="flex items-center gap-1 md:hidden">
           <Link
             to="/login"
-            className="inline-flex min-h-11 items-center px-2 text-[13px] font-semibold text-surface-700"
+            className="inline-flex min-h-11 items-center px-2 text-[14px] font-semibold text-surface-700"
           >
             Sign in
           </Link>
@@ -151,11 +151,11 @@ export function MarketingHeader({
           <Link
             to={ctaTo}
             onClick={() => setMobileOpen(false)}
-            className="mt-3 flex h-13 items-center justify-center rounded-lg bg-accent-400 px-5 text-[15px] font-bold text-primary-950"
+            className="mt-3 flex h-13 items-center justify-center rounded-lg bg-accent-400 px-5 text-[16px] font-bold text-primary-950"
           >
             {ctaLabel}
           </Link>
-          <p className="mt-3 text-center text-[12px] font-medium text-surface-500">
+          <p className="mt-3 text-center text-[13px] font-medium text-surface-500">
             Independent property visits · from ₹999
           </p>
         </div>

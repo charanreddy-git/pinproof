@@ -60,7 +60,7 @@ export function RequesterLandingPage() {
                 <span className="text-primary-700">Without the trip.</span>
               </h1>
 
-              <p className="mt-4 max-w-[29rem] text-[15.5px] leading-[1.65] text-surface-600 sm:text-[16.5px]">
+              <p className="mt-4 max-w-[29rem] text-[17px] leading-[1.65] text-surface-600 sm:text-[17px]">
                 For plots, flats, shops, and sites you cannot get to. A local inspector
                 visits and sends a GPS-checked photo.
               </p>
@@ -70,7 +70,7 @@ export function RequesterLandingPage() {
                   Book a visit
                   <ArrowRightIcon size={17} />
                 </Button>
-                <p className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-surface-500 sm:justify-start">
+                <p className="flex items-center justify-center gap-1.5 text-[14.5px] font-semibold text-surface-500 sm:justify-start">
                   <CheckIcon size={13} className="text-primary-600" />
                   From ₹999 · No app needed
                 </p>
@@ -93,7 +93,7 @@ export function RequesterLandingPage() {
               <RequesterServices />
             </div>
 
-            <p className="mt-4 text-[11.5px] font-medium text-surface-500">
+            <p className="mt-4 text-[14px] font-medium text-surface-500">
               Every visit includes a GPS-checked photo and a private report.
             </p>
 
@@ -105,19 +105,19 @@ export function RequesterLandingPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {STEPS.map(([title, desc], index) => (
                   <div key={title} className="flex gap-3">
-                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary-800 text-[11px] font-bold text-white">
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary-800 text-[12px] font-bold text-white">
                       {index + 1}
                     </span>
                     <div>
-                      <p className="text-[13px] font-bold text-surface-950">{title}</p>
-                      <p className="mt-0.5 text-[11.5px] leading-snug text-surface-500">{desc}</p>
+                      <p className="text-[15px] font-bold text-surface-950">{title}</p>
+                      <p className="mt-0.5 text-[14px] leading-snug text-surface-500">{desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <p className="mt-5 border-t border-surface-200 pt-4 text-[11.5px] text-surface-500">
+            <p className="mt-5 border-t border-surface-200 pt-4 text-[14px] text-surface-500">
               Standard ₹999 · Detailed ₹2,499 ·{" "}
               <Link to="/#pricing" className="font-bold text-primary-700 underline underline-offset-4">
                 Compare visits
@@ -140,8 +140,8 @@ export function RequesterLandingPage() {
         <section className="border-b border-primary-800 bg-primary-950">
           <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-6 sm:flex-row sm:items-center sm:px-6 lg:px-8">
             <div>
-              <p className="text-[13.5px] font-bold text-white">Want to earn instead?</p>
-              <p className="mt-0.5 text-[11.5px] text-primary-300">
+              <p className="text-[15px] font-bold text-white">Want to earn instead?</p>
+              <p className="mt-0.5 text-[14px] text-primary-300">
                 Check properties nearby. Get paid weekly.
               </p>
             </div>
@@ -157,7 +157,7 @@ export function RequesterLandingPage() {
           <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center lg:px-8">
             <div>
               <p className="eyebrow text-primary-800">Ready when you are</p>
-              <h2 className="mt-2 text-[1.7rem] leading-[1.12] text-primary-950 sm:text-[2rem]">
+              <h2 className="mt-2 text-[1.85rem] leading-[1.12] text-primary-950 sm:text-[2rem]">
                 See your property this week.
               </h2>
             </div>

@@ -15,7 +15,7 @@ export function InspectorEarnBand() {
           <h2 className="mt-3 text-[1.9rem] leading-[1.12] text-white sm:text-[2.5rem]">
             Earn per visit.
           </h2>
-          <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-primary-200">
+          <p className="mt-2 max-w-md text-[15.5px] leading-relaxed text-primary-200">
             Check properties nearby. Get paid weekly.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4">
@@ -25,7 +25,7 @@ export function InspectorEarnBand() {
             </Button>
             <Link
               to="/captain"
-              className="text-[12.5px] font-semibold text-primary-200 underline underline-offset-4 hover:text-white"
+              className="text-[14.5px] font-semibold text-primary-200 underline underline-offset-4 hover:text-white"
             >
               How it works
             </Link>
@@ -40,12 +40,12 @@ export function InspectorEarnBand() {
               ["₹500", "Priority"],
             ].map(([pay, label]) => (
               <div key={label} className="px-3 first:pl-0">
-                <p className="display-number text-[1.35rem] leading-none text-white">{pay}</p>
-                <p className="mt-1 text-[10.5px] font-medium text-primary-300">{label}</p>
+                <p className="display-number text-[1.45rem] leading-none text-white">{pay}</p>
+                <p className="mt-1 text-[13px] font-medium text-primary-300">{label}</p>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[10.5px] font-medium text-primary-300">
+          <p className="mt-3 text-[13px] font-medium text-primary-300">
             Weekly settlement · No joining fee
           </p>
         </div>

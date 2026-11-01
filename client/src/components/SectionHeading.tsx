@@ -36,7 +36,7 @@ export function SectionHeading({
         </p>
       )}
       <h2
-        className={`mt-3 text-[2rem] leading-[1.1] sm:text-[2.7rem] ${
+        className={`mt-3 text-[2.15rem] leading-[1.1] sm:text-[2.7rem] ${
           isDark ? "text-white" : "text-surface-950"
         } ${titleClassName}`}
       >
@@ -48,7 +48,7 @@ export function SectionHeading({
       />
       {description && (
         <p
-          className={`mt-4 text-[14px] leading-[1.7] ${
+          className={`mt-4 text-[15px] leading-[1.7] ${
             isDark ? "text-primary-200" : "text-surface-600"
           }`}
         >

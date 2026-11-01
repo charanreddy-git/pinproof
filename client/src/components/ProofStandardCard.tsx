@@ -8,23 +8,23 @@ export function ProofStandardCard() {
   return (
     <div className="rounded-xl border border-primary-800 bg-primary-950 p-5 text-white sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-accent-300">
+        <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-accent-300">
           <ShieldCheckIcon size={13} />
           The PinProof standard
         </p>
-        <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-accent-300">
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent-300">
           Server-checked
         </span>
       </div>
 
       <div className="mt-5 flex items-end gap-2">
-        <span className="display-number text-[4.4rem] leading-[0.8] sm:text-[5.2rem]">
+        <span className="display-number text-[4.5rem] leading-[0.8] sm:text-[5.2rem]">
           100
         </span>
-        <span className="mb-1 text-[12px] font-bold text-accent-300">metres</span>
+        <span className="mb-1 text-[13px] font-bold text-accent-300">metres</span>
       </div>
 
-      <p className="mt-4 text-[1.05rem] font-bold leading-snug">
+      <p className="mt-4 text-[1.15rem] font-bold leading-snug">
         The furthest a proof photo can be from your pin.
       </p>
 
@@ -37,7 +37,7 @@ export function ProofStandardCard() {
         ].map((item) => (
           <p
             key={item}
-            className="flex items-start gap-1.5 text-[11px] leading-snug text-primary-100"
+            className="flex items-start gap-1.5 text-[13.5px] leading-snug text-primary-100"
           >
             <CheckIcon size={11} className="mt-0.5 flex-shrink-0 text-accent-400" />
             {item}

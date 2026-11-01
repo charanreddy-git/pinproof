@@ -29,7 +29,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
               aria-controls={answerId}
               className="flex min-h-14 w-full items-center justify-between gap-4 px-1 py-4 text-left"
             >
-              <span className="text-[15px] font-bold leading-snug text-surface-950 sm:text-[16px]">
+              <span className="text-[16px] font-bold leading-snug text-surface-950 sm:text-[17px]">
                 {faq.q}
               </span>
               <span
@@ -44,7 +44,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
             {isOpen && (
               <div
                 id={answerId}
-                className="px-1 pb-5 pr-8 text-[14px] leading-[1.7] text-surface-600"
+                className="px-1 pb-5 pr-8 text-[16px] leading-[1.7] text-surface-600"
               >
                 {faq.a}
               </div>

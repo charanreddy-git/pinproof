@@ -29,16 +29,16 @@ export function MarketingFooter({
   return (
     <footer className="border-t border-surface-200 bg-surface-100">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_0.6fr_0.6fr] lg:gap-16">
-          <div>
+        <div className="grid grid-cols-2 gap-8 lg:grid-cols-[1.4fr_0.6fr_0.6fr] lg:gap-16">
+          <div className="col-span-2 lg:col-span-1">
             <Logo size="sm" variant={variant} label={logoLabel} />
             <p className="mt-6 max-w-md text-[16px] font-semibold leading-relaxed text-surface-800">
               A real person. A real visit. A proof you can keep.
             </p>
-            <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-surface-500">
+            <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-surface-500">
               {tagline}
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] font-semibold text-surface-600">
+            <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[14px] font-semibold text-surface-600">
               <span className="inline-flex items-center gap-1.5">
                 <ShieldCheckIcon size={13} className="text-primary-600" />
                 GPS-verified
@@ -52,13 +52,13 @@ export function MarketingFooter({
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-surface-500">{section}</h4>
+              <h4 className="text-[12.5px] font-bold uppercase tracking-[0.14em] text-surface-500">{section}</h4>
               <ul className="mt-3 space-y-1">
                 {links.map((link) => (
                   <li key={`${section}-${link.to}`}>
                     <Link
                       to={link.to}
-                      className="inline-flex min-h-10 items-center text-[13.5px] font-semibold text-surface-700 transition-colors hover:text-primary-700"
+                      className="inline-flex min-h-11 items-center text-[15.5px] font-semibold text-surface-700 transition-colors hover:text-primary-700"
                     >
                       {link.label}
                     </Link>
@@ -69,7 +69,7 @@ export function MarketingFooter({
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-surface-200 pt-5 text-[11.5px] text-surface-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-surface-200 pt-5 text-[13.5px] text-surface-500 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} PinProof. All rights reserved.</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Private photo proof</span>
