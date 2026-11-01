@@ -1,55 +1,53 @@
 import { Link } from "react-router-dom";
 import { Button } from "./ui";
-import { SectionHeading } from "./SectionHeading";
-import { ArrowRightIcon, ClockIcon } from "./Icons";
+import { ArrowRightIcon } from "./Icons";
 
 /**
- * Dark cross-sell band for the inspector side. Shared by the home page and
- * the requester landing page so both audiences can switch paths in one click.
+ * Short cross-sell band for the inspector side. One promise, three pay
+ * points, one action.
  */
 export function InspectorEarnBand() {
   return (
     <section className="survey-grid-dark bg-primary-950">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-16 lg:px-8">
-        <div className="rounded-xl border border-white/10 bg-white/[0.06] p-5">
-          <p className="eyebrow text-accent-300">Per-visit pay</p>
-          <div className="mt-4 divide-y divide-white/10">
-            {[
-              ["Quick check", "₹120"],
-              ["Detailed visit", "₹250"],
-              ["Priority inspection", "₹500"],
-            ].map(([label, pay]) => (
-              <div key={label} className="flex items-center justify-between gap-4 py-2.5">
-                <span className="text-[12.5px] font-medium text-primary-100">{label}</span>
-                <span className="display-number text-[1.25rem] leading-none text-white">{pay}</span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 flex items-start gap-2 border-t border-white/10 pt-3.5 text-[11.5px] leading-relaxed text-primary-200">
-            <ClockIcon size={14} className="mt-0.5 flex-shrink-0 text-accent-400" />
-            Weekly settlement to bank or UPI. No joining fee.
-          </p>
-        </div>
-
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-14 lg:px-8">
         <div>
-          <SectionHeading
-            tone="dark"
-            eyebrow="Earn with PinProof"
-            title="Get paid to check properties nearby."
-            description="Turn your local knowledge into per-visit income. Accept nearby checks when they suit your day, and get paid after the requester reviews the proof."
-          />
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <p className="eyebrow text-accent-300">For inspectors</p>
+          <h2 className="mt-3 text-[1.9rem] leading-[1.12] text-white sm:text-[2.5rem]">
+            Earn per visit.
+          </h2>
+          <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-primary-200">
+            Check properties nearby. Get paid weekly.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
             <Button to="/captain/signup" variant="accent">
               Start earning
               <ArrowRightIcon size={15} />
             </Button>
             <Link
               to="/captain"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/25 px-5 text-[14px] font-semibold text-white transition-colors hover:bg-white/10"
+              className="text-[12.5px] font-semibold text-primary-200 underline underline-offset-4 hover:text-white"
             >
-              How inspecting works
+              How it works
             </Link>
           </div>
+        </div>
+
+        <div>
+          <div className="grid grid-cols-3 divide-x divide-white/15 border-y border-white/15 py-3">
+            {[
+              ["₹120", "Quick check"],
+              ["₹250", "Detailed"],
+              ["₹500", "Priority"],
+            ].map(([pay, label]) => (
+              <div key={label} className="px-3 first:pl-0">
+                <p className="display-number text-[1.35rem] leading-none text-white">{pay}</p>
+                <p className="mt-1 text-[10.5px] font-medium text-primary-300">{label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[10.5px] font-medium text-primary-300">
+            Weekly settlement · No joining fee
+          </p>
         </div>
       </div>
     </section>

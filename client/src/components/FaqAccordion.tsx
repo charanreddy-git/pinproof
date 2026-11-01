@@ -11,7 +11,7 @@ interface FaqAccordionProps {
 }
 
 export function FaqAccordion({ items }: FaqAccordionProps) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const baseId = useId();
 
   return (

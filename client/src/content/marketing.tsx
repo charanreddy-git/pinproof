@@ -14,32 +14,32 @@ import {
 export const REQUESTER_SERVICES = [
   {
     icon: MapPinIcon,
-    title: "Plot and land",
-    desc: "Boundaries, access, and what is actually on the site.",
+    title: "Plot & land",
+    desc: "Boundaries, access, and site status.",
   },
   {
     icon: HomeIcon,
-    title: "Construction progress",
-    desc: "See the stage before your next payment is due.",
+    title: "Construction",
+    desc: "See the stage before you pay.",
   },
   {
     icon: ClipboardIcon,
-    title: "Rental or possession",
-    desc: "Condition, finishes, and snags before you commit.",
+    title: "Rental check",
+    desc: "Condition and snags before you commit.",
   },
   {
     icon: ShieldCheckIcon,
     title: "Family property",
-    desc: "A local check when you cannot be there yourself.",
+    desc: "A local check when you are away.",
   },
   {
     icon: SearchIcon,
-    title: "Resale inspection",
-    desc: "Look before you travel for a site visit.",
+    title: "Resale check",
+    desc: "Look before you travel.",
   },
   {
     icon: CompassIcon,
-    title: "Shop or office",
-    desc: "Frontage, access, and neighbourhood context.",
+    title: "Shop / office",
+    desc: "Frontage, access, and surroundings.",
   },
 ];

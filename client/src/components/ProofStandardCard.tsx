@@ -1,59 +1,49 @@
 import { CheckIcon, ShieldCheckIcon } from "./Icons";
 
 /**
- * The proof standard, stated plainly. Used on marketing pages in place of a
- * fictional sample visit so the trust claim is concrete and verifiable.
+ * The proof standard, stated plainly. Kept short so it works as a mobile
+ * trust card instead of pushing the next section far down the page.
  */
 export function ProofStandardCard() {
   return (
-    <div className="rounded-2xl border border-primary-800 bg-primary-950 p-5 text-white sm:p-7">
+    <div className="rounded-xl border border-primary-800 bg-primary-950 p-5 text-white sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-300">
-          <ShieldCheckIcon size={14} />
+        <p className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-accent-300">
+          <ShieldCheckIcon size={13} />
           The PinProof standard
         </p>
-        <span className="hidden text-[10px] font-bold uppercase tracking-[0.14em] text-accent-300 sm:inline">
+        <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-accent-300">
           Server-checked
         </span>
       </div>
 
-      <div className="mt-6 flex items-end gap-2">
-        <span className="display-number text-[5.2rem] leading-[0.82] sm:text-[6rem]">
+      <div className="mt-5 flex items-end gap-2">
+        <span className="display-number text-[4.4rem] leading-[0.8] sm:text-[5.2rem]">
           100
         </span>
-        <span className="mb-1.5 text-[13px] font-bold text-accent-300">metres</span>
+        <span className="mb-1 text-[12px] font-bold text-accent-300">metres</span>
       </div>
 
-      <p className="mt-5 text-[1.15rem] font-bold leading-snug">
+      <p className="mt-4 text-[1.05rem] font-bold leading-snug">
         The furthest a proof photo can be from your pin.
       </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-primary-200">
-        If the photo is taken outside this radius, our server rejects it. The
-        inspector cannot override the check.
-      </p>
 
-      <div className="mt-5 space-y-2.5 rounded-lg bg-white/[0.05] p-4">
+      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-white/10 pt-3">
         {[
-          "Submitted inside PinProof, not forwarded",
-          "GPS coordinates and accuracy saved",
-          "Capture and submission times recorded",
-          "Private to your account — never a public listing",
+          "Rejected outside 100 m",
+          "GPS and time saved",
+          "Private to your account",
+          "Not a forwarded photo",
         ].map((item) => (
           <p
             key={item}
-            className="flex items-start gap-2 text-[12.5px] leading-relaxed text-primary-100"
+            className="flex items-start gap-1.5 text-[11px] leading-snug text-primary-100"
           >
-            <CheckIcon size={12} className="mt-0.5 flex-shrink-0 text-accent-400" />
+            <CheckIcon size={11} className="mt-0.5 flex-shrink-0 text-accent-400" />
             {item}
           </p>
         ))}
       </div>
-
-      <p className="mt-4 flex items-start gap-2 text-[11.5px] font-semibold leading-relaxed text-primary-300">
-        <ShieldCheckIcon size={13} className="mt-0.5 flex-shrink-0 text-accent-400" />
-        A gallery upload is allowed only if the camera cannot be used. The location
-        check still applies.
-      </p>
     </div>
   );
 }
