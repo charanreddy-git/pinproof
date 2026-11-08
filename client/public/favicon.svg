@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <rect width="48" height="48" rx="13" fill="#115a48"/>
-  <path d="M24 11.5c-5 0-9 4-9 9 0 6.6 9 16 9 16s9-9.4 9-16c0-5-4-9-9-9Z" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linejoin="round"/>
-  <path d="m19.8 20.7 2.9 2.9 5.7-6" fill="none" stroke="#ffc84d" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <style>
+    :root { --logo-ink: #14171a; --logo-accent: #ffca20; }
+    @media (prefers-color-scheme: dark) { :root { --logo-ink: #ffffff; } }
+  </style>
+  <path d="M12 6H28a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H14a4 4 0 0 0-4 4v16a4 4 0 0 0 4 4h16a4 4 0 0 0 4-4V20a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16a10 10 0 0 1-10 10H12A10 10 0 0 1 2 36V16A10 10 0 0 1 12 6Z" fill="var(--logo-ink)"/>
+  <rect x="34" y="2" width="12" height="12" rx="2.5" fill="var(--logo-accent)"/>
 </svg>

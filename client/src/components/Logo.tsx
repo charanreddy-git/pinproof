@@ -8,9 +8,9 @@ interface LogoProps {
 }
 
 const sizeConfig = {
-  sm: { box: "h-9 w-9 rounded-xl", text: "text-[1.05rem]", tag: "text-[10px]" },
-  md: { box: "h-11 w-11 rounded-2xl", text: "text-[1.28rem]", tag: "text-[10.5px]" },
-  lg: { box: "h-14 w-14 rounded-2xl", text: "text-[1.6rem]", tag: "text-[11.5px]" },
+  sm: { box: "h-9 w-9", text: "text-[1.05rem]", tag: "text-[10px]" },
+  md: { box: "h-11 w-11", text: "text-[1.28rem]", tag: "text-[10.5px]" },
+  lg: { box: "h-14 w-14", text: "text-[1.6rem]", tag: "text-[11.5px]" },
 };
 
 function Mark({
@@ -19,33 +19,20 @@ function Mark({
 }: Omit<LogoProps, "label" | "to">) {
   const s = sizeConfig[size];
   const isInverse = variant === "inverse";
-  const isAccent = variant === "accent";
-
-  const box = isInverse
-    ? "bg-white"
-    : isAccent
-      ? "bg-accent-400"
-      : "bg-accent-400";
-  const pin = "var(--color-primary-950)";
-  const tick = isInverse ? "var(--color-surface-50)" : "var(--color-accent-400)";
+  const frame = isInverse ? "var(--color-white)" : "var(--color-primary-950)";
 
   return (
     <span
-      className={`${s.box} ${box} flex flex-shrink-0 items-center justify-center shadow-sm`}
+      className={`${s.box} flex flex-shrink-0 items-center justify-center`}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 48 48" fill="none" className="h-[78%] w-[78%]">
+      {/* Vector refinement of logo.png; keep geometry aligned with favicon.svg. */}
+      <svg viewBox="0 0 48 48" fill="none" className="h-full w-full" focusable="false">
         <path
-          d="M24 5.5c-7.6 0-13.7 5.9-13.7 13.2 0 9.8 13.7 22.6 13.7 22.6s13.7-12.8 13.7-22.6C37.7 11.4 31.6 5.5 24 5.5Z"
-          fill={pin}
+          d="M12 6H28a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H14a4 4 0 0 0-4 4v16a4 4 0 0 0 4 4h16a4 4 0 0 0 4-4V20a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16a10 10 0 0 1-10 10H12A10 10 0 0 1 2 36V16A10 10 0 0 1 12 6Z"
+          fill={frame}
         />
-        <path
-          d="m17.9 19.1 4.1 4.2 8.4-9"
-          stroke={tick}
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <rect x="34" y="2" width="12" height="12" rx="2.5" fill="var(--color-accent-400)" />
       </svg>
     </span>
   );
