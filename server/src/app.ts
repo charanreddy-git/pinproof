@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
 import { authRoutes, taskRoutes } from "./routes";
 import { errorHandler } from "./middleware";
 import { prisma } from "./lib";
@@ -33,7 +32,10 @@ app.use((req, _res, next) => {
 });
 
 // Static files — uploaded evidence images
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.sendStatus(404);
+});
 
 // API routes
 app.use("/api/auth", authRoutes);
@@ -45,8 +47,17 @@ app.get("/api/health", async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   } catch {
-    res.status(503).json({ status: "error", timestamp: new Date().toISOString() });
+    res.status(503).json({
+      status: "error",
+      success: false,
+      message: "The database is temporarily unavailable. Please try again shortly.",
+      timestamp: new Date().toISOString(),
+    });
   }
+});
+
+app.use("/api", (_req, res) => {
+  res.status(404).json({ success: false, message: "API endpoint not found." });
 });
 
 // Global error handler (must be last)

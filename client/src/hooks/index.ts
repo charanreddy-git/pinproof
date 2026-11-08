@@ -1,4 +1,4 @@
-export { useSocket, useTaskUpdates, useLiveLocation, useGlobalTaskUpdates } from "./useSocket";
+export { useTaskUpdates, useLiveLocation } from "./useTaskUpdates";
 export { useGeolocation } from "./useLocation";
 export {
   useTaskList,

@@ -11,12 +11,11 @@ export function InspectorEarnBand() {
     <section className="survey-grid-dark bg-primary-950">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-14 lg:px-8">
         <div>
-          <p className="eyebrow text-accent-300">For inspectors</p>
           <h2 className="mt-3 text-[1.9rem] leading-[1.12] text-white sm:text-[2.5rem]">
-            Earn per visit.
+            Inspect properties. Earn per visit.
           </h2>
           <p className="mt-2 max-w-md text-[15.5px] leading-relaxed text-primary-200">
-            Check properties nearby. Get paid weekly.
+            Check properties nearby. Agree payment arrangements before accepting.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <Button to="/captain/signup" variant="accent">
@@ -46,7 +45,7 @@ export function InspectorEarnBand() {
             ))}
           </div>
           <p className="mt-3 text-[13px] font-medium text-primary-300">
-            Weekly settlement · No joining fee
+            Illustrative fees · No joining fee
           </p>
         </div>
       </div>

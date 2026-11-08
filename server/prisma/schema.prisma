@@ -81,6 +81,11 @@ model Task {
   targetLng   Float
   status      TaskStatus @default(OPEN)
 
+  visitPlan           String?
+  quotedPricePaise    Int?
+  propertyType        String?
+  evidenceSource      String?
+
   evidenceImage       String?
   evidenceLat         Float?
   evidenceLng         Float?
@@ -95,12 +100,21 @@ model Task {
   acceptedBy User? @relation("AcceptedTasks", fields: [acceptedById], references: [id])
 
   locationLogs LocationLog[]
+  evidence     Evidence?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([createdById])
   @@index([acceptedById])
+}
+
+// Kept separately so task-list queries never load photo bytes.
+model Evidence {
+  taskId      String @id
+  task        Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  data        Bytes
+  contentType String
 }
 
 model LocationLog {

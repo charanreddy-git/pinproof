@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const createTaskSchema = z.object({
+  visitPlan: z.enum(["STANDARD", "DETAILED"]).default("STANDARD"),
+  propertyType: z.string().trim().max(80).optional(),
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   latitude: z.number().min(-90).max(90),
@@ -11,6 +13,7 @@ export const submitTaskSchema = z.object({
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
   accuracy: z.coerce.number().min(0).max(100_000).optional(),
+  evidenceSource: z.enum(["CAMERA", "UPLOAD"]).default("UPLOAD"),
   capturedAt: z.string().datetime({ offset: true }).optional(),
 });
 

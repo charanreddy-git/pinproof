@@ -6,6 +6,11 @@ export interface Coordinates {
   longitude: number;
 }
 
+export interface TaskLocation extends Coordinates {
+  taskId: string;
+  timestamp: string;
+}
+
 export interface DemoAccount {
   role: Role;
   name: string;
@@ -14,6 +19,7 @@ export interface DemoAccount {
 
 export interface AuthModeResponse {
   mode: AuthMode;
+  phoneSignInEnabled?: boolean;
   demo: DemoAccount[];
 }
 
@@ -43,6 +49,10 @@ export type TaskUser = Pick<User, "id" | "name" | "role"> & {
 };
 
 export interface Task {
+  visitPlan?: "STANDARD" | "DETAILED" | null;
+  quotedPricePaise?: number | null;
+  propertyType?: string | null;
+  evidenceSource?: "CAMERA" | "UPLOAD" | null;
   id: string;
   title: string;
   description: string;
@@ -106,6 +116,8 @@ export interface ApiResponse<T> {
 }
 
 export interface CreateTaskInput {
+  visitPlan: "STANDARD" | "DETAILED";
+  propertyType?: string;
   title: string;
   description: string;
   latitude: number;

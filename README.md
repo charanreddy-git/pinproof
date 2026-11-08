@@ -7,6 +7,8 @@ GPS-verified photos, and send back proof — so you can check a property from an
 Built for the Indian market: Google Maps links, ₹ pricing, plot and under-construction
 visits, and mobile-first flows that work on a phone.
 
+**Live demo:** https://track-proof.vercel.app — choose **Continue as Requester** or **Continue as Inspector**. The demo uses shared accounts; phone OTP is disabled. Vercel hosts the frontend and API, with private proof photos persisted in Neon. See the current-deployment section in [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ---
 
 ## What it does
@@ -47,7 +49,7 @@ visits, and mobile-first flows that work on a phone.
 - Google Maps link parsing (including shortened links) with a tap-to-place map fallback
 - "Use my current location" shortcut
 - Mobile-first request flow with quick-add inspection checklists
-- Live inspector tracking over Socket.IO
+- Live inspector tracking over authenticated HTTP polling
 - Server-enforced 100 m proximity check using the Haversine formula
 - Photo evidence (JPG/PNG, 5 MB max), stored locally and served from `/uploads`
 - GPS coordinates, accuracy, capture time, and submission time stored with each proof
@@ -67,7 +69,7 @@ visits, and mobile-first flows that work on a phone.
 | Maps | Leaflet + React Leaflet, OpenStreetMap tiles |
 | Backend | Node.js, Express 5, TypeScript |
 | Database | PostgreSQL with Prisma ORM |
-| Realtime | Socket.IO |
+| Live updates | HTTP polling over REST |
 | Auth | Mobile OTP + JWT (Bearer token); Fast2SMS, Twilio, or webhook delivery |
 | Uploads | Multer, local `server/uploads` directory |
 
@@ -80,7 +82,7 @@ budget Android screens. Fonts are bundled, not fetched from Google Fonts.
 
 ```
 React client (Vite :5173)
-   │  REST /api  +  Socket.IO
+   │  REST /api (polling for live updates)
    ▼
 Express API (:3001)
    │  Prisma
@@ -90,9 +92,8 @@ PostgreSQL
    └── evidence files → server/uploads → served at /uploads
 ```
 
-The client talks to same-origin `/api`, `/uploads`, and `/socket.io` paths in
-development; Vite proxies them to the API. Set `VITE_API_URL` and `VITE_WS_URL`
-for a separately hosted API.
+The client talks to same-origin `/api` and `/uploads` paths in development;
+Vite proxies them to the API. Set `VITE_API_URL` for a separately hosted API.
 
 ---
 
@@ -104,11 +105,10 @@ pinproof/
 │   ├── src/
 │   │   ├── components/      # UI primitives, layout, map, task components
 │   │   ├── contexts/        # Auth + toast providers
-│   │   ├── hooks/           # Socket and data hooks
+│   │   ├── hooks/           # Polling and data hooks
 │   │   ├── layouts/         # Auth and dashboard shells
 │   │   ├── pages/           # Public, auth, user, and inspector pages
-│   │   ├── services/        # REST API wrappers
-│   │   └── sockets/         # Socket.IO client
+│   │   └── services/        # REST API wrappers
 │   └── vite.config.ts
 ├── server/
 │   ├── prisma/
@@ -120,7 +120,6 @@ pinproof/
 │       ├── middleware/
 │       ├── routes/
 │       ├── services/
-│       ├── sockets/
 │       └── validators/
 ├── .env.example
 └── README.md
@@ -167,7 +166,6 @@ The client needs no `.env` file for local development. For a hosted API, create
 
 ```env
 VITE_API_URL="https://api.example.com/api"
-VITE_WS_URL="https://api.example.com"
 ```
 
 ### 3. Prepare the database
@@ -200,6 +198,23 @@ npm run dev
 
 Open <http://localhost:5173>. The API health check is at
 <http://localhost:3001/api/health>.
+
+#### Local login troubleshooting
+
+- **Database unreachable at `127.0.0.1:5432`:** start PostgreSQL and confirm that
+  `DATABASE_URL` in `server/.env` points to an existing database and login role.
+  For a Homebrew PostgreSQL 18 installation, run `brew services start postgresql@18`.
+  If the binaries are missing, install them with `brew install postgresql@18` first.
+  Then run `npx prisma migrate deploy` and `npm run prisma:seed` from `server/`.
+  Demo login also requires PostgreSQL.
+- **Service unavailable:** keep `npm run dev` running in both `server/` and
+  `client/`. Check `/api/health` on port 3001 directly and through port 5173.
+  Database outages return JSON with status 503; empty or non-JSON proxy responses
+  now show a readable client error instead of a JSON parsing exception.
+
+Regression checks: `npm test` in `server/`, and `npm test` in `client/`
+(the client test runner requires Node 22.6+). Run `npm run build` in both folders
+and `npm run lint` in `client/` for type, build, and lint checks.
 
 ### 5. Sign in with a phone number
 
@@ -253,7 +268,7 @@ The submitted visit includes an illustrative sample proof image at
 
 **Safety:** demo mode is always disabled when `NODE_ENV=production`. The server
 reports `"mode": "otp"` and returns `403` from the demo endpoints in production,
-regardless of `AUTH_MODE`. Demo mode never bypasses task, evidence, or Socket.IO
+regardless of `AUTH_MODE`. Demo mode never bypasses task, evidence, or location
 authorization rules.
 
 ### Build for production
@@ -264,9 +279,9 @@ cd ../client && npm run build
 ```
 
 The server emits to `server/dist`; the client emits static files to `client/dist`.
-Serve `client/dist` from any static host and point `VITE_API_URL` / `VITE_WS_URL`
-at the API. Make sure `CLIENT_URL` on the server matches the deployed client origin
-so CORS and Socket.IO handshakes succeed.
+Serve `client/dist` from any static host and point `VITE_API_URL` at the API.
+Make sure `CLIENT_URL` on the server matches the deployed client origin so CORS
+requests succeed.
 
 For a complete deployment walkthrough (Cloudflare Pages + Render + Neon + Fast2SMS),
 see [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -304,7 +319,6 @@ see [DEPLOYMENT.md](DEPLOYMENT.md).
 | `NODE_ENV` | `server/.env` | No | `development` or `production` |
 | `CLIENT_URL` | `server/.env` | No | Allowed client origin (default `http://localhost:5173`) |
 | `VITE_API_URL` | `client/.env` | No | API base including `/api` (default `/api`) |
-| `VITE_WS_URL` | `client/.env` | No | Socket.IO origin (default same origin) |
 
 ---
 
@@ -431,6 +445,8 @@ The `webhook` SMS provider receives:
 | `POST` | `/api/tasks` | User | Create a visit request |
 | `GET` | `/api/tasks` | Both | User: own requests. Inspector: nearby open + own accepted (`?filter=available` or `?filter=accepted`). Send `latitude` and `longitude` to see open visits within 7 km. |
 | `GET` | `/api/tasks/:id` | Both | Get one visit, subject to access rules |
+| `GET` | `/api/tasks/:id/location` | Both | Latest authorized GPS point for the visit |
+| `POST` | `/api/tasks/:id/location` | Inspector | Share a GPS point while the visit is `IN_PROGRESS` |
 | `POST` | `/api/tasks/:id/accept` | Inspector | Claim an open visit |
 | `POST` | `/api/tasks/:id/start` | Inspector | Mark the visit as on the way |
 | `POST` | `/api/tasks/:id/submit` | Inspector | Submit photo + GPS (`multipart/form-data`: `image`, `latitude`, `longitude`, optional `accuracy`, optional `capturedAt`) |
@@ -448,19 +464,22 @@ The `webhook` SMS provider receives:
 }
 ```
 
-### Real-time events
+### Live updates
 
-| Direction | Event | Purpose |
-|-----------|-------|---------|
-| Client → server | `task:join` / `task:leave` | Join or leave a visit room |
-| Client → server | `captain:location:update` | Inspector shares GPS while `IN_PROGRESS` |
-| Server → client | `captain:location:updated` | Live GPS broadcast to the visit room |
-| Server → client | `task:accepted`, `task:started`, `task:submitted`, `task:completed` | Lifecycle updates |
-| Server → client | `task:updated` | Refresh the user's dashboards |
+There is no persistent connection. Clients use the regular authenticated REST API
+and poll the resources they are viewing:
 
-Socket connections authenticate with `auth.token` during the handshake. Location
-writes are throttled to one database log per inspector per visit every 60 seconds;
-live broadcasts still go out immediately.
+| Resource | Polling interval | Purpose |
+|----------|------------------|---------|
+| `GET /api/tasks/:id` | 5 seconds | Visit lifecycle status |
+| `GET /api/tasks/:id/location` | 5 seconds while tracking | Latest inspector GPS point |
+| `GET /api/tasks` | 15 seconds | Dashboard and visit lists |
+
+Every request uses `Authorization: Bearer <token>` and the same task-level access
+rules as the rest of the API. The location endpoint accepts JSON
+`{ "latitude": 12.97, "longitude": 77.64 }`. Location writes are throttled to one
+database log per inspector per visit every 60 seconds, while the latest point is
+served immediately from memory between writes.
 
 ---
 
@@ -514,7 +533,7 @@ or multi-photo reports. Prices and inspector payouts shown on the marketing page
 are illustrative product copy; no money moves through the app.
 
 `AUTH_MODE=demo` is a local development convenience only. It is refused in
-production and does not change the OTP, task, evidence, or Socket.IO authorization
+production and does not change the OTP, task, evidence, or location authorization
 paths.
 
 Map pins are inline SVG generated by the client; no third-party marker assets are

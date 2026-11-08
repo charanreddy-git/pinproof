@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { unlink } from "node:fs/promises";
-import { TaskService } from "../services";
-import { createTaskSchema, submitTaskSchema, taskQuerySchema } from "../validators";
-import { ApiError, logger, resolveGoogleMapsUrl } from "../utils";
-import { getIO } from "../sockets";
+import { LocationService, TaskService } from "../services";
+import {
+  createTaskSchema,
+  locationUpdateSchema,
+  submitTaskSchema,
+  taskQuerySchema,
+} from "../validators";
+import { ApiError, resolveGoogleMapsUrl } from "../utils";
 
 /** Express 5 types `req.params` values as `string | string[]`; named route params are always strings at runtime. */
 function paramId(req: Request): string {
@@ -12,6 +15,43 @@ function paramId(req: Request): string {
 }
 
 export class TaskController {
+  static async getLocation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await TaskService.getLatestLocation(paramId(req), req.user!.userId);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
+  static async getEvidence(req: Request, res: Response, next: NextFunction) {
+    try {
+      const evidence = await TaskService.getEvidence(paramId(req), req.user!.userId);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      if (evidence.data && evidence.contentType) {
+        res.type(evidence.contentType).send(Buffer.from(evidence.data));
+      } else if (evidence.path) {
+        res.sendFile(evidence.path, (error) => { if (error) next(error); });
+      }
+    } catch (error) { next(error); }
+  }
+
+  static async updateLocation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = locationUpdateSchema.parse({
+        ...req.body,
+        taskId: paramId(req),
+      });
+      const data = await LocationService.recordLocation(
+        req.user!.userId,
+        input
+      );
+      res.status(202).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createTask(req: Request, res: Response, next: NextFunction) {
     try {
       const input = createTaskSchema.parse(req.body);
@@ -75,14 +115,6 @@ export class TaskController {
         req.user!.userId
       );
 
-      const io = getIO();
-      io.to(`task:${task.id}`).emit("task:accepted", {
-        taskId: task.id,
-        captainId: req.user!.userId,
-        captainName: task.acceptedBy!.name,
-      });
-      io.to(`user:${task.createdById}`).to(`user:${task.acceptedById}`).emit("task:updated");
-
       res.status(200).json({ success: true, data: task });
     } catch (error) {
       next(error);
@@ -96,10 +128,6 @@ export class TaskController {
         req.user!.userId
       );
 
-      const io = getIO();
-      io.to(`task:${task.id}`).emit("task:started", { taskId: task.id });
-      io.to(`user:${task.createdById}`).to(`user:${task.acceptedById}`).emit("task:updated");
-
       res.status(200).json({ success: true, data: task });
     } catch (error) {
       next(error);
@@ -107,44 +135,24 @@ export class TaskController {
   }
 
   static async submitTask(req: Request, res: Response, next: NextFunction) {
-    let evidenceSaved = false;
     try {
       if (!req.file) {
         throw ApiError.badRequest("Evidence image is required");
       }
 
       const input = submitTaskSchema.parse(req.body);
-      const imagePath = `/uploads/${req.file.filename}`;
+      const imagePath = `/api/tasks/${paramId(req)}/evidence`;
 
       const task = await TaskService.submitTask(
         paramId(req),
         req.user!.userId,
         input,
-        imagePath
+        imagePath,
+        { data: req.file.buffer, contentType: req.file.mimetype }
       );
-      evidenceSaved = true;
-
-      const io = getIO();
-      io.to(`task:${task.id}`).emit("task:submitted", {
-        taskId: task.id,
-        evidenceImage: imagePath,
-      });
-      io.to(`user:${task.createdById}`).to(`user:${task.acceptedById}`).emit("task:updated");
 
       res.status(200).json({ success: true, data: task });
     } catch (error) {
-      // Remove an upload that was rejected before it became the saved proof.
-      if (req.file && !evidenceSaved) {
-        await unlink(req.file.path).catch((cleanupError) => {
-          logger.warn("Could not remove rejected evidence upload", {
-            path: req.file?.path,
-            reason:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : String(cleanupError),
-          });
-        });
-      }
       next(error);
     }
   }
@@ -155,10 +163,6 @@ export class TaskController {
         paramId(req),
         req.user!.userId
       );
-
-      const io = getIO();
-      io.to(`task:${task.id}`).emit("task:completed", { taskId: task.id });
-      io.to(`user:${task.createdById}`).to(`user:${task.acceptedById}`).emit("task:updated");
 
       res.status(200).json({ success: true, data: task });
     } catch (error) {

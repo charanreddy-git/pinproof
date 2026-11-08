@@ -1,16 +1,6 @@
-import { disconnectSocket } from "../sockets";
+import { ApiError, readApiResponse } from "./api-response";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
-
-class ApiError extends Error {
-  response: { data: { message?: string } };
-
-  constructor(message: string, data: { message?: string }) {
-    super(message);
-    this.name = "ApiError";
-    this.response = { data };
-  }
-}
 
 async function request<T>(
   method: string,
@@ -28,32 +18,33 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`${API_URL}${url}`, {
-    method,
-    headers,
-    body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${url}`, {
+      method,
+      headers,
+      body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new ApiError(
+      "Could not reach the service. Check your connection and try again."
+    );
+  }
 
-  if (response.status === 401) {
+  if (response.status === 401 && localStorage.getItem("token") === token) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    disconnectSocket();
     if (
       !window.location.pathname.includes("/login") &&
       !window.location.pathname.includes("/register") &&
       !window.location.pathname.includes("/signup")
     ) {
-      window.location.href = "/login";
+      window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
   }
 
-  const json = await response.json();
-
-  if (!response.ok) {
-    throw new ApiError(json.message || "Request failed", json);
-  }
-
-  return { data: json };
+  return { data: await readApiResponse<T>(response) };
 }
 
 const api = {

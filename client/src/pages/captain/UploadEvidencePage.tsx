@@ -45,6 +45,7 @@ export function UploadEvidencePage() {
   const [useFallback, setUseFallback] = useState(false);
 
   // Photo
+  const [captureSource, setCaptureSource] = useState<"CAMERA" | "UPLOAD">("UPLOAD");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -54,6 +55,7 @@ export function UploadEvidencePage() {
     longitude: number;
     accuracy: number | null;
   } | null>(null);
+  const [locationAttempt, setLocationAttempt] = useState(0);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [lockedLocation, setLockedLocation] = useState<{
     latitude: number;
@@ -91,7 +93,7 @@ export function UploadEvidencePage() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [locationAttempt]);
 
   // Camera manager.
   const startCamera = useCallback(
@@ -151,7 +153,7 @@ export function UploadEvidencePage() {
   if (isError || !task) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-[12px] font-bold text-primary-700">Visit unavailable</p>
+        <p className="text-[14px] font-bold text-primary-700">Visit unavailable</p>
         <h1 className="mt-2 text-[2rem] font-extrabold tracking-[-0.035em] text-surface-950">
           We couldn’t find that visit.
         </h1>
@@ -168,7 +170,7 @@ export function UploadEvidencePage() {
   if (task.status !== "IN_PROGRESS") {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-[12px] font-bold text-primary-700">Not open yet</p>
+        <p className="text-[14px] font-bold text-primary-700">Not open yet</p>
         <h1 className="mt-2 text-[2rem] font-extrabold tracking-[-0.035em] text-surface-950">
           Proof isn’t open for this visit.
         </h1>
@@ -198,11 +200,26 @@ export function UploadEvidencePage() {
     ? calculateDistance(task.targetLat, task.targetLng, proofLocation.latitude, proofLocation.longitude)
     : null;
 
-  const isInRange = proofDistance !== null && proofDistance <= 100;
+  const hasAccurateLocation = (proofLocation?.accuracy ?? Infinity) <= 100;
+  const isInRange = proofDistance !== null && proofDistance <= 100 && hasAccurateLocation;
+  const locationHint = !proofLocation ? "Allow location access to continue." : !hasAccurateLocation ? "GPS accuracy must be within 100 m. Retake or reselect the photo after GPS improves." : "Move within 100 m of the property to submit.";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
+
+    if (!selected.type.startsWith("image/")) {
+      addToast("error", "Choose a JPG or PNG photo.");
+      e.target.value = "";
+      return;
+    }
+    if (selected.size > 4 * 1024 * 1024) {
+      addToast("error", "That photo is over 4 MB. Choose a smaller file.");
+      e.target.value = "";
+      return;
+    }
+
+    setCaptureSource("UPLOAD");
     setFile(selected);
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result as string);
@@ -231,6 +248,7 @@ export function UploadEvidencePage() {
     }
 
     const video = videoRef.current;
+    setCaptureSource("CAMERA");
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
@@ -300,7 +318,8 @@ export function UploadEvidencePage() {
       formData.append("image", file);
       formData.append("latitude", finalLocation.latitude.toString());
       formData.append("longitude", finalLocation.longitude.toString());
-      formData.append("capturedAt", finalLocation.capturedAt);
+      formData.append("evidenceSource", captureSource);
+      if (captureSource === "CAMERA") formData.append("capturedAt", finalLocation.capturedAt);
       if (finalLocation.accuracy !== null) {
         formData.append("accuracy", finalLocation.accuracy.toString());
       }
@@ -318,18 +337,24 @@ export function UploadEvidencePage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="mx-auto max-w-xl pb-28 sm:pb-0">
       <Button to={`/captain/tasks/${task.id}`} variant="ghost" size="sm" className="-ml-2 min-h-11">
         <span aria-hidden="true">←</span>
         Back to visit
       </Button>
 
       <div className="mt-3">
-        <p className="text-[12px] font-bold text-primary-700">Proof photo</p>
-        <h1 className="mt-1 text-[2.1rem] font-extrabold leading-[1.03] tracking-[-0.04em] text-surface-950 sm:text-[2.4rem]">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[14px] font-bold text-primary-700">Proof photo</p>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[13px] font-bold text-surface-500 shadow-sm">
+            <ShieldCheckIcon size={10} className="text-primary-600" />
+            GPS and photo check
+          </span>
+        </div>
+        <h1 className="mt-1 text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-surface-950 sm:text-[2rem]">
           Take the proof photo
         </h1>
-        <p className="mt-2 max-w-md text-[12.5px] leading-relaxed text-surface-600">
+        <p className="mt-2 max-w-md text-[14px] leading-relaxed text-surface-600">
           Stand at the property and take the photo here. The app records your GPS
           location and the time.
         </p>
@@ -339,32 +364,32 @@ export function UploadEvidencePage() {
         {/* GPS status */}
         <section className="rounded-3xl border border-surface-200 bg-white p-4 shadow-card">
           <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-1.5 text-[11.5px] font-bold text-surface-700">
+            <p className="flex items-center gap-1.5 text-[13px] font-bold text-surface-700">
               <MapPinIcon size={14} className="text-primary-600" />
               Location check
             </p>
-            {currentLocation ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-bold text-primary-700">
+            {currentLocation && !locationError ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[13px] font-bold text-primary-700">
                 <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary-500" />
                 GPS on
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-100 px-2.5 py-1 text-[10px] font-bold text-surface-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-100 px-2.5 py-1 text-[13px] font-bold text-surface-500">
                 <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-surface-400" />
-                Locating
+                {locationError ? "Unavailable" : "Locating"}
               </span>
             )}
           </div>
 
           {locationError ? (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-danger-200 bg-danger-50 p-3">
+            <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-danger-200 bg-danger-50 p-3">
               <AlertTriangleIcon size={15} className="mt-0.5 flex-shrink-0 text-danger-600" />
-              <p className="text-[12px] font-medium leading-relaxed text-danger-700">{locationError}</p>
+              <div><p className="text-[14px] font-medium leading-relaxed text-danger-700">{locationError}</p><Button variant="secondary" size="sm" className="mt-2" onClick={() => { setLocationError(null); setCurrentLocation(null); setLocationAttempt((attempt) => attempt + 1); }}>Retry location</Button></div>
             </div>
           ) : !currentLocation ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-50 p-3">
               <CompassIcon size={15} className="animate-spin-slow flex-shrink-0 text-surface-500" />
-              <p className="text-[12px] text-surface-500">Getting your GPS location…</p>
+              <p className="text-[14px] text-surface-500">Getting your GPS location…</p>
             </div>
           ) : null}
 
@@ -383,12 +408,12 @@ export function UploadEvidencePage() {
                   )}
                   <div>
                     <p className={`text-[13px] font-bold ${isInRange ? "text-primary-900" : "text-danger-700"}`}>
-                      {isInRange ? "You’re at the property" : "You’re too far away"}
+                      {isInRange ? "GPS is within the property radius" : !hasAccurateLocation ? "GPS accuracy is too low" : "You’re too far away"}
                     </p>
-                    <p className={`mt-0.5 text-[11px] leading-relaxed ${isInRange ? "text-primary-800" : "text-danger-600"}`}>
+                    <p className={`mt-0.5 text-[13px] leading-relaxed ${isInRange ? "text-primary-800" : "text-danger-600"}`}>
                       {isInRange
                         ? "You can take and submit the proof photo."
-                        : "Move closer to the pin. Proof is only accepted within 100 m."}
+                        : locationHint}
                     </p>
                   </div>
                 </div>
@@ -396,49 +421,71 @@ export function UploadEvidencePage() {
                   <p className={`whitespace-nowrap text-[1.8rem] font-extrabold leading-none tracking-[-0.04em] tabular-nums ${isInRange ? "text-primary-800" : "text-danger-700"}`}>
                     {Math.round(proofDistance)}
                   </p>
-                  <p className={`mt-0.5 whitespace-nowrap text-[9.5px] font-bold ${isInRange ? "text-primary-600" : "text-danger-500"}`}>
+                  <p className={`mt-0.5 whitespace-nowrap text-[13px] font-bold ${isInRange ? "text-primary-600" : "text-danger-500"}`}>
                     metres from pin
                   </p>
                 </div>
               </div>
 
               {!lockedLocation && liveDistance !== null && liveDistance <= 100 && currentLocation?.accuracy && (
-                <p className="mt-2 text-[10px] font-semibold text-primary-700">
+                <p className="mt-2 text-[13px] font-semibold text-primary-700">
                   GPS accuracy ±{Math.round(currentLocation.accuracy)} m
                 </p>
               )}
+
+              <div className="mt-3">
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/70">
+                  <div
+                    className={`h-full rounded-full transition-colors duration-150 ${
+                      isInRange ? "bg-primary-600" : "bg-danger-500"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, Math.max(4, (proofDistance / 100) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm font-semibold">
+                  <span className={isInRange ? "text-primary-600" : "text-danger-500"}>
+                    0 m at pin
+                  </span>
+                  <span className={isInRange ? "text-primary-600" : "text-danger-500"}>
+                    100 m proof limit
+                  </span>
+                </div>
+              </div>
             </div>
           ) : currentLocation && proofLocation === null ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-warning-200 bg-warning-50 p-3">
               <CompassIcon size={15} className="flex-shrink-0 text-warning-600" />
-              <p className="text-[12px] font-medium text-warning-800">Calculating distance…</p>
+              <p className="text-[14px] font-medium text-warning-800">Calculating distance…</p>
             </div>
           ) : null}
 
-          <p className="mt-3 flex items-start gap-2 border-t border-surface-100 pt-2.5 text-[10.5px] leading-relaxed text-surface-500">
+          <p className="mt-3 flex items-start gap-2 border-t border-surface-100 pt-2.5 text-[13px] leading-relaxed text-surface-500">
             <ShieldCheckIcon size={12} className="mt-0.5 flex-shrink-0 text-primary-600" />
-            Your GPS location, accuracy, and time are saved with the photo and
-            can’t be edited later.
+            Submission GPS and accuracy are saved with the photo. Camera photos also include a device-reported capture time.
           </p>
         </section>
 
         {/* Camera / upload */}
         <section className="rounded-3xl border border-surface-200 bg-white p-4 shadow-card">
           <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-1.5 text-[11.5px] font-bold text-surface-700">
+            <p className="flex items-center gap-1.5 text-[13px] font-bold text-surface-700">
               <CameraIcon size={14} className="text-primary-600" />
               Photo
             </p>
             <button
               type="button"
-              onClick={() => setUseFallback(!useFallback)}
-              className="inline-flex min-h-10 items-center rounded-full bg-surface-100 px-3 text-[11px] font-bold text-surface-700 transition-colors hover:bg-surface-200"
+              onClick={() => { setUseFallback(!useFallback); setPreview(null); setFile(null); setLockedLocation(null); }}
+              className="inline-flex min-h-10 items-center rounded-full bg-surface-100 px-3 text-[13px] font-bold text-surface-700 transition-colors hover:bg-surface-200"
             >
               {useFallback ? "Use camera" : "Upload instead"}
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-3 space-y-4">
+          <p className="mt-3 text-sm text-surface-600">{useFallback ? "Uploaded images are labelled as uploads. Their original capture time and location are not verified." : "Camera photos save device-reported capture time and GPS. Submit within 15 minutes of capture."}</p>
+          {(lockedLocation?.accuracy ?? currentLocation?.accuracy ?? 0) > 100 && <p role="alert" className="mt-3 text-sm text-warning-800">GPS accuracy is too low. Move to an open area and refresh your location before capturing again.</p>}
+          <form id="evidence-form" onSubmit={handleSubmit} className="mt-3 space-y-4">
             {!useFallback ? (
               <div className="space-y-3">
                 {preview ? (
@@ -446,12 +493,12 @@ export function UploadEvidencePage() {
                     <div className="flex aspect-video items-center justify-center">
                       <img src={preview} alt="Captured proof" className="h-full object-contain" />
                     </div>
-                    <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface-950/75 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+                    <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface-950/75 px-2.5 py-1 text-[13px] font-bold text-white backdrop-blur-sm">
                       <CheckIcon size={10} className="text-primary-300" />
                       Photo ready
                     </div>
                     {lockedLocation && (
-                      <div className="absolute bottom-3 left-3 rounded-full bg-surface-950/75 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white backdrop-blur-sm">
+                      <div className="absolute bottom-3 left-3 rounded-full bg-surface-950/75 px-2.5 py-1 text-[13px] font-semibold tabular-nums text-white backdrop-blur-sm">
                         {lockedLocation.latitude.toFixed(4)}, {lockedLocation.longitude.toFixed(4)}
                       </div>
                     )}
@@ -470,7 +517,7 @@ export function UploadEvidencePage() {
 
                     {isCameraActive && (
                       <>
-                        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface-950/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+                        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-surface-950/60 px-2.5 py-1 text-[13px] font-bold text-white backdrop-blur-sm">
                           <span className="h-1.5 w-1.5 rounded-full bg-accent-400" />
                           Live
                         </div>
@@ -489,7 +536,7 @@ export function UploadEvidencePage() {
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-950/95 p-6 text-center">
                         <CameraIcon size={25} className="mb-3 text-danger-400" />
                         <p className="text-[13px] font-bold text-white">Camera unavailable</p>
-                        <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-surface-300">{cameraError}</p>
+                        <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-surface-300">{cameraError}</p>
                         <div className="mt-4 flex gap-2">
                           <Button
                             type="button"
@@ -519,13 +566,13 @@ export function UploadEvidencePage() {
                       <button
                         type="button"
                         onClick={capturePhoto}
-                        disabled={!currentLocation || !!cameraError}
-                        className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-4 border-white bg-white p-1 shadow-[0_0_0_3px_rgba(15,74,48,0.15),0_10px_24px_rgba(22,30,24,0.16)] transition-transform active:scale-95 disabled:opacity-40"
+                        disabled={!currentLocation || !!cameraError || !isCameraActive}
+                        className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-4 border-white bg-white p-1 shadow-camera transition-transform active:scale-95 disabled:opacity-40"
                         aria-label="Take photo"
                       >
                         <span className={`block h-full w-full rounded-full ${currentLocation && !cameraError ? "bg-accent-500" : "bg-surface-300"}`} />
                       </button>
-                      <p className="text-[11px] font-semibold text-surface-500">
+                      <p className="text-[13px] font-semibold text-surface-500">
                         {currentLocation ? "Tap to take the proof photo" : "Waiting for GPS…"}
                       </p>
                     </>
@@ -552,7 +599,7 @@ export function UploadEvidencePage() {
                   {preview ? (
                     <div className="w-full space-y-3">
                       <img src={preview} alt="Selected proof" className="mx-auto max-h-48 rounded-xl object-contain" />
-                      <p className="truncate text-[10.5px] font-medium text-surface-500">{file?.name}</p>
+                      <p className="truncate text-[13px] font-medium text-surface-500">{file?.name}</p>
                       <Button
                         type="button"
                         size="sm"
@@ -571,10 +618,10 @@ export function UploadEvidencePage() {
                         <CameraIcon size={21} className="text-primary-600" />
                       </div>
                       <p className="text-[13px] font-bold text-surface-800">Tap to choose a photo</p>
-                      <p className="mt-1 text-[10.5px] font-medium text-surface-500">
-                        JPG or PNG · max 5 MB
+                      <p className="mt-1 text-[13px] font-medium text-surface-500">
+                        JPG or PNG · max 4 MB
                       </p>
-                      <p className="mt-3 max-w-xs text-[10.5px] leading-relaxed text-surface-500">
+                      <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-surface-500">
                         The GPS distance check still applies to an uploaded photo.
                       </p>
                     </>
@@ -587,14 +634,24 @@ export function UploadEvidencePage() {
               <div className="flex items-start gap-2.5">
                 <CameraIcon size={14} className="mt-0.5 flex-shrink-0 text-accent-600" />
                 <div>
-                  <p className="text-[11px] font-bold text-surface-700">
+                  <p className="text-[13px] font-bold text-surface-700">
                     Before you shoot
                   </p>
-                  <p className="mt-1 text-[10.5px] leading-relaxed text-surface-600">
-                    Frame the property, not the street. Include the boundary, gate,
-                    or the feature the requester asked about. Avoid faces and
-                    personal documents.
+                  <p className="mt-1 text-[13px] leading-relaxed text-surface-600">
+                    Frame the property, not the street. Avoid faces and personal
+                    documents.
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {["Property in frame", "No faces", "Good light"].map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[13px] font-bold text-surface-500 shadow-sm"
+                      >
+                        <CheckIcon size={9} className="text-primary-600" />
+                        {item}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -617,12 +674,40 @@ export function UploadEvidencePage() {
             </div>
 
             {file && !isInRange && (
-              <p className="text-center text-[11px] font-semibold text-danger-700">
-                Move within 100 m of the property to submit.
+              <p className="text-center text-[13px] font-semibold text-danger-700">
+                {locationHint}
               </p>
             )}
           </form>
         </section>
+      </div>
+
+      {/* Sticky submit for small screens */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-200 bg-white/95 px-3 pt-3 bottom-safe backdrop-blur-xl sm:hidden">
+        <div className="mx-auto flex max-w-xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className={`text-[13px] font-bold ${file && isInRange ? "text-primary-700" : "text-surface-500"}`}>
+              {!file
+                ? "Take or upload a photo"
+                : !isInRange
+                  ? !hasAccurateLocation ? "Improve GPS accuracy" : `Move within 100 m · ${proofDistance !== null ? `${Math.round(proofDistance)} m away` : "locating"}`
+                  : "Photo ready to submit"}
+            </p>
+            <p className="mt-0.5 text-[13px] font-medium text-surface-400">
+              Device GPS and capture method are saved with the proof.
+            </p>
+          </div>
+          <Button
+            type="submit"
+            form="evidence-form"
+            isLoading={isSubmitting}
+            disabled={!file || !isInRange}
+            size="sm"
+            className="min-h-11 flex-shrink-0 px-5"
+          >
+            Submit proof
+          </Button>
+        </div>
       </div>
     </div>
   );

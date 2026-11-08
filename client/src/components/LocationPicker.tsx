@@ -25,12 +25,12 @@ function ClickHandler({
   return null;
 }
 
-function ChangeView({ center }: { center: [number, number] }) {
+function ChangeView({ latitude, longitude }: { latitude: number; longitude: number }) {
   const map = useMap();
   useEffect(() => {
     // Zoom in when a location is chosen so the pin is easy to place accurately.
-    map.setView(center, Math.max(map.getZoom(), 14));
-  }, [center, map]);
+    map.setView([latitude, longitude], Math.max(map.getZoom(), 14));
+  }, [latitude, longitude, map]);
   return null;
 }
 
@@ -74,7 +74,7 @@ export function LocationPicker({
         <ClickHandler onLocationSelect={onLocationSelect} />
         {position && (
           <>
-            <ChangeView center={position} />
+            <ChangeView latitude={position[0]} longitude={position[1]} />
             <Marker
               draggable={true}
               eventHandlers={eventHandlers}

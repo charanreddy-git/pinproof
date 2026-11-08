@@ -11,35 +11,28 @@ const HELPFUL_LINKS = [
 
 export function NotFoundPage() {
   return (
-    <div className="paper-bg flex min-h-screen flex-col">
+    <div className="bg-surface-100 flex min-h-screen flex-col">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Logo />
         <Link
           to="/"
-          className="inline-flex min-h-11 items-center px-2 text-[12.5px] font-semibold text-surface-600 transition-colors hover:text-surface-950"
+          className="inline-flex min-h-11 items-center px-2 text-[14px] font-semibold text-surface-600 transition-colors hover:text-surface-950"
         >
           Back to home
-          <span aria-hidden="true" className="ml-1.5">
-            →
-          </span>
         </Link>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4 pb-16 pt-6 sm:px-6">
-        <div className="w-full max-w-lg animate-slide-up text-center">
-          <div className="crosshair mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-surface-300 bg-white">
+        <div className="w-full max-w-lg text-center">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-surface-300 bg-white">
             <MapPinIcon size={36} className="text-primary-700" />
           </div>
 
-          <p className="eyebrow mt-7 text-primary-700">
-            Page not found
-          </p>
-          <h1 className="mt-2 text-[2.1rem] leading-[1.12] text-surface-950 sm:text-[2.6rem]">
-            This page has moved on.
+          <h1 className="mt-7 text-[2.1rem] leading-[1.12] text-surface-950 sm:text-[2.6rem]">
+            Page not found.
           </h1>
           <p className="mx-auto mt-3 max-w-md text-[14px] leading-[1.7] text-surface-600">
-            The link may be old or mistyped. Your visits and proof are safe —
-            head back home or book a property visit.
+            The address may be mistyped or the link may have changed. Return home or use one of the links below.
           </p>
 
           <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
@@ -52,11 +45,11 @@ export function NotFoundPage() {
           </div>
 
           <div className="mt-11 border-l-2 border-primary-700 bg-white px-4 py-4 text-left">
-            <p className="flex items-center gap-1.5 text-[12px] font-bold text-surface-700">
+            <p className="flex items-center gap-1.5 text-[14px] font-bold text-surface-700">
               <CompassIcon size={14} className="text-primary-600" />
               Looking for something?
             </p>
-            <nav className="mt-2 divide-y divide-surface-100">
+            <nav aria-label="Helpful links" className="mt-2 divide-y divide-surface-100">
               {HELPFUL_LINKS.map((link) => (
                 <Link
                   key={link.to}
@@ -64,18 +57,12 @@ export function NotFoundPage() {
                   className="group flex min-h-11 items-center justify-between gap-2 py-2 text-[13px] font-semibold text-surface-700 transition-colors hover:text-primary-800"
                 >
                   {link.label}
-                  <span
-                    aria-hidden="true"
-                    className="text-surface-400 transition-transform group-hover:translate-x-0.5"
-                  >
-                    →
-                  </span>
                 </Link>
               ))}
             </nav>
           </div>
 
-          <p className="mt-5 flex items-center justify-center gap-1.5 text-[10.5px] font-medium text-surface-500">
+          <p className="mt-5 flex items-center justify-center gap-1.5 text-[13px] font-medium text-surface-500">
             <ShieldCheckIcon size={12} className="text-primary-600" />
             GPS-verified proof · private by default
           </p>

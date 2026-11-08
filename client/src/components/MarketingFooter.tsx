@@ -11,7 +11,7 @@ interface MarketingFooterProps {
 export function MarketingFooter({
   variant = "primary",
   logoLabel = "PinProof",
-  tagline = "Independent inspectors visit your property and send back a dated, GPS-verified photo — so you can decide without making the trip.",
+  tagline = "Local inspectors visit your property and submit a photo with device GPS — so you can review it without making the trip.",
 }: MarketingFooterProps) {
   const footerLinks = {
     Explore: [
@@ -41,18 +41,16 @@ export function MarketingFooter({
             <div className="mt-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[14px] font-semibold text-surface-600">
               <span className="inline-flex items-center gap-1.5">
                 <ShieldCheckIcon size={13} className="text-primary-600" />
-                GPS-verified
+                GPS-checked
               </span>
-              <span aria-hidden="true" className="text-surface-300">·</span>
               <span>Made in India</span>
-              <span aria-hidden="true" className="text-surface-300">·</span>
-              <span>UPI-friendly</span>
+              <span>Browser-based visits</span>
             </div>
           </div>
 
           {Object.entries(footerLinks).map(([section, links]) => (
             <div key={section}>
-              <h4 className="text-[12.5px] font-bold uppercase tracking-[0.14em] text-surface-500">{section}</h4>
+              <h4 className="text-sm font-semibold text-surface-500">{section}</h4>
               <ul className="mt-3 space-y-1">
                 {links.map((link) => (
                   <li key={`${section}-${link.to}`}>
@@ -73,9 +71,7 @@ export function MarketingFooter({
           <p>&copy; {new Date().getFullYear()} PinProof. All rights reserved.</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>Private photo proof</span>
-            <span aria-hidden="true">·</span>
             <span>100 m GPS check</span>
-            <span aria-hidden="true">·</span>
             <span>Built for India</span>
           </p>
         </div>

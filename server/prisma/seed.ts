@@ -47,6 +47,8 @@ async function main() {
         targetLat: 12.9719,
         targetLng: 77.6412,
         createdById: requester.id,
+        visitPlan: "STANDARD",
+        quotedPricePaise: 99900,
       },
     });
   }

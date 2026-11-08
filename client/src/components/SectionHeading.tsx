@@ -42,10 +42,6 @@ export function SectionHeading({
       >
         {title}
       </h2>
-      <span
-        aria-hidden="true"
-        className={`mt-4 block h-1 w-12 bg-accent-400 ${isCentered ? "mx-auto" : ""}`}
-      />
       {description && (
         <p
           className={`mt-4 text-[15px] leading-[1.7] ${

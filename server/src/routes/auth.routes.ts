@@ -26,11 +26,18 @@ const verifyLimiter = rateLimit({
   },
 });
 
+// A public demo offers only the two prepared accounts, never console OTPs.
+router.use("/otp", (_req, res, next) => {
+  if (process.env.PUBLIC_DEMO === "true") {
+    res.status(403).json({ success: false, message: "Phone sign-in is unavailable in this demo. Choose Try the demo above." });
+    return;
+  }
+  next();
+});
 router.post("/otp/request", requestLimiter, AuthController.requestOtp);
 router.post("/otp/verify", verifyLimiter, AuthController.verifyOtp);
 
-// Development-only auth bypass. DemoService re-checks the environment on every
-// request, so these routes cannot mint demo sessions in production.
+// Explicit demo access. DemoService re-checks AUTH_MODE and PUBLIC_DEMO on every request.
 const demoLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: 60,

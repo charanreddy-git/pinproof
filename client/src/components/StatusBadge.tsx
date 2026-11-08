@@ -46,8 +46,8 @@ export function StatusBadge({ status, size = "sm" }: StatusBadgeProps) {
   const config = statusConfig[status];
   const sizeClass =
     size === "md"
-      ? "gap-2 px-3.5 py-2 text-[12px]"
-      : "gap-1.5 px-2.5 py-1.5 text-[11px]";
+      ? "gap-2 px-3.5 py-2 text-[14px]"
+      : "gap-1.5 px-2.5 py-1.5 text-[13px]";
 
   return (
     <span

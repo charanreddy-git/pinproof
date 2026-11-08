@@ -1,7 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts";
-import { Button, DemoAccessPanel, Input, useToast } from "../../components";
+import {
+  Button,
+  DemoAccessPanel,
+  Input,
+  OtpInput,
+  useToast,
+} from "../../components";
 import { CompassIcon, HomeIcon } from "../../components/Icons";
 import type { Role } from "../../types";
 import { formatPhone, normalizePhoneInput } from "../../utils/phone";
@@ -92,7 +98,7 @@ function RolePicker({
             <span className="block text-[14px] font-bold text-surface-900">
               Check a property
             </span>
-            <span className="mt-0.5 block text-[12.5px] leading-snug text-surface-500">
+            <span className="mt-0.5 block text-[14px] leading-snug text-surface-500">
               For owners, buyers, and NRIs
             </span>
           </span>
@@ -114,7 +120,7 @@ function RolePicker({
             <span className="block text-[14px] font-bold text-surface-900">
               Inspect properties
             </span>
-            <span className="mt-0.5 block text-[12.5px] leading-snug text-surface-500">
+            <span className="mt-0.5 block text-[14px] leading-snug text-surface-500">
               Earn per completed visit
             </span>
           </span>
@@ -148,7 +154,7 @@ export function RegisterPage({ forcedRole }: RegisterPageProps = {}) {
   const [resendIn, setResendIn] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { requestOtp, verifyOtp, authMode } = useAuth();
+  const { requestOtp, verifyOtp, authMode, phoneSignInEnabled } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -307,12 +313,14 @@ export function RegisterPage({ forcedRole }: RegisterPageProps = {}) {
     ? `?returnTo=${encodeURIComponent(returnTo)}`
     : "";
 
+  if (!phoneSignInEnabled) return <DemoAccessPanel returnTo={returnTo} />;
+
   return (
     <div>
       <DemoAccessPanel returnTo={returnTo} />
 
       <div>
-        <p className="text-[12px] font-bold text-primary-700">
+        <p className="text-[14px] font-bold text-primary-700">
           {step === "name"
             ? "One last step"
             : isInspector
@@ -361,7 +369,7 @@ export function RegisterPage({ forcedRole }: RegisterPageProps = {}) {
             {isInspector ? "Continue as inspector" : "Continue"}
           </Button>
 
-          <p className="text-center text-[12px] leading-relaxed text-surface-500">
+          <p className="text-center text-[14px] leading-relaxed text-surface-500">
             We’ll send a one-time code. No password needed.
           </p>
         </form>
@@ -371,32 +379,46 @@ export function RegisterPage({ forcedRole }: RegisterPageProps = {}) {
 
           {devOtp && (
             <div className="rounded-xl border border-dashed border-accent-300 bg-accent-50 px-3.5 py-3 text-surface-800">
-              <p className="text-[12px] font-bold text-accent-800">Local test code</p>
-              <p className="mt-1 text-lg font-extrabold tracking-[0.28em]">{devOtp}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-surface-500">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[14px] font-bold text-accent-800">
+                    Local test code
+                  </p>
+                  <p className="mt-1 text-lg font-extrabold tracking-[0.28em]">
+                    {devOtp}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCode(devOtp)}
+                  className="inline-flex min-h-10 flex-shrink-0 items-center rounded-full bg-white px-3 text-[13px] font-bold text-accent-800 shadow-sm transition-colors hover:bg-accent-100"
+                >
+                  Use code
+                </button>
+              </div>
+              <p className="mt-1 text-[14px] leading-relaxed text-surface-500">
                 Shown only because SMS is set to console. It is never returned in
                 production.
               </p>
             </div>
           )}
 
-          <Input
-            label="6-digit code"
-            type="text"
-            value={code}
-            onChange={(e) =>
-              setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            placeholder="000000"
-            required
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            pattern="[0-9]{6}"
-            id="register-code"
-            className="text-center text-xl font-bold tracking-[0.4em]"
-            autoFocus
-          />
+          <div>
+            <label
+              htmlFor="register-code-0"
+              className="mb-2 block text-[14px] font-bold text-surface-700"
+            >
+              6-digit code
+            </label>
+            <OtpInput
+              value={code}
+              onChange={setCode}
+              id="register-code"
+              label="Sign-up verification code"
+              autoFocus
+              disabled={isLoading}
+            />
+          </div>
 
           <Button
             type="submit"

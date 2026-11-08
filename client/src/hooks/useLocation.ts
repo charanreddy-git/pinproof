@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { emitLocationUpdate } from "../sockets";
+import { sendTaskLocation } from "../services";
 
 interface GeolocationState {
   latitude: number | null;
@@ -64,7 +64,15 @@ export function useGeolocation() {
             longitude,
             error: null,
           }));
-          emitLocationUpdate(taskId, latitude, longitude);
+          void sendTaskLocation(taskId, latitude, longitude).catch((err) => {
+            setState((prev) => ({
+              ...prev,
+              error:
+                err instanceof Error
+                  ? err.message
+                  : "Could not share location",
+            }));
+          });
         } catch (err) {
           setState((prev) => ({
             ...prev,

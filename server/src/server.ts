@@ -1,15 +1,12 @@
 import "dotenv/config";
 import http from "http";
 import app from "./app";
-import { initializeSocket } from "./sockets";
 import { prisma } from "./lib";
 import { logger } from "./utils";
 
 const PORT = process.env.PORT || 3001;
 
 const httpServer = http.createServer(app);
-
-initializeSocket(httpServer);
 
 httpServer.listen(PORT, () => {
   logger.info(`Server ready`, { port: PORT });

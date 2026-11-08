@@ -43,6 +43,26 @@ export function errorHandler(
     return;
   }
 
+  // Connection failures and exhausted/timed-out connections are temporary
+  // service outages, not validation errors or raw Prisma messages for clients.
+  if (
+    err instanceof Prisma.PrismaClientInitializationError ||
+    (err instanceof Prisma.PrismaClientKnownRequestError &&
+      ["P1001", "P1002", "P1008", "P1017", "P2024"].includes(err.code))
+  ) {
+    logger.error("Database unavailable; check PostgreSQL and DATABASE_URL", err);
+    res.status(503).json({
+      success: false,
+      message: "The database is temporarily unavailable. Please try again shortly.",
+    });
+    return;
+  }
+
+  if (err instanceof SyntaxError && "type" in err && err.type === "entity.parse.failed") {
+    res.status(400).json({ success: false, message: "Request body must be valid JSON." });
+    return;
+  }
+
   // Unexpected errors — log with full context, return safe message in production
   logger.error("Unhandled error", err);
   res.status(500).json({

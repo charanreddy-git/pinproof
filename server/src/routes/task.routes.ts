@@ -6,6 +6,7 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+router.use((_req, res, next) => { res.setHeader("Cache-Control", "private, no-store"); next(); });
 
 // Resolve Google Maps URL (USER only)
 router.post("/resolve-url", authorize(["USER"]), TaskController.resolveUrl);
@@ -15,6 +16,17 @@ router.post("/", authorize(["USER"]), TaskController.createTask);
 
 // Get tasks (filtered by role automatically)
 router.get("/", TaskController.getTasks);
+
+router.get("/:id/location", TaskController.getLocation);
+
+// Share a live GPS point (CAPTAIN only)
+router.post(
+  "/:id/location",
+  authorize(["CAPTAIN"]),
+  TaskController.updateLocation
+);
+
+router.get("/:id/evidence", TaskController.getEvidence);
 
 // Get single task
 router.get("/:id", TaskController.getTaskById);

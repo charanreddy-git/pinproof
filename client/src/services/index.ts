@@ -15,3 +15,4 @@ export {
   submitTask,
   completeTask,
 } from "./task.service";
+export { fetchTaskLocation, sendTaskLocation } from "./location.service";

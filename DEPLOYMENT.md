@@ -1,6 +1,29 @@
 # PinProof Deployment Guide
 
-Last updated: 31 October 2026
+Last updated: 7 November 2026
+
+## Current live deployment — Vercel demo
+
+- App: **https://track-proof.vercel.app** (Vercel project `track-proof`, root `client`).
+- API: **https://pinproof-api.vercel.app** (Vercel project `pinproof-api`, root `server`).
+- Database: existing Neon PostgreSQL. Proof bytes are stored in the separate `Evidence` table and served only to visit participants.
+- `client/vercel.json` proxies `/api/*` to the API and handles React Router deep links. `server/vercel.json` deploys the Express handler at `server/api/index.ts`.
+- Public demo requires **both** `AUTH_MODE=demo` and `PUBLIC_DEMO=true`, with `NODE_ENV=production`. It exposes only the two prepared demo accounts; phone OTP endpoints are disabled and their forms are hidden.
+- Demo accounts and visits are shared. Do not use this deployment for real customer data.
+- Upload limit is 4 MB (JPG/PNG), below the Vercel request-body limit. Existing proof files have been migrated into Neon.
+- Live GPS is persisted on each Vercel update so separate function instances see the same location.
+- Production secrets are stored as encrypted Vercel environment variables, not in git. `CLIENT_URL=https://track-proof.vercel.app`; no client-side secret or API URL is needed.
+
+Deploy from the repository root after checks and `cd server && npx prisma migrate deploy`:
+
+```bash
+VERCEL_ORG_ID=team_HBidWMLIDZeQNd7P4TPZLG80 VERCEL_PROJECT_ID=prj_87YSNBA9kHVNJ3Q4mTIhf0ZKthxc vercel deploy --prod --yes
+VERCEL_ORG_ID=team_HBidWMLIDZeQNd7P4TPZLG80 VERCEL_PROJECT_ID=prj_93ZOiQ6H4AAn5rXfj8Ve6skWQfJb vercel deploy --prod --yes
+```
+
+Verified over the public URL: health, both demo logins, private existing evidence, create/accept/start, location polling, multipart photo persistence, completion, and blocked OTP. The first deployment was uploaded from the local working tree; it does not require a git push.
+
+The Render/Cloudflare guide below is the earlier alternative architecture. Its development-only demo and local-disk notes are superseded by this section for the Vercel deployment. For real OTP accounts, use a separate database/deployment, disable `PUBLIC_DEMO`, set `AUTH_MODE=otp`, and configure the SMS provider.
 
 > Free-tier demo and early-access setup. Not a final production architecture.
 
@@ -11,7 +34,7 @@ Last updated: 31 October 2026
 | Layer | Service | Plan |
 |---|---|---|
 | Frontend | Cloudflare Pages | Free |
-| API + Socket.IO | Render Web Service | Free |
+| HTTP API | Render Web Service | Free |
 | PostgreSQL | Neon | Free |
 | SMS | Fast2SMS | Pay-as-you-go |
 | Evidence images | Render local disk | Free, ephemeral |
@@ -23,12 +46,12 @@ Last updated: 31 October 2026
 ```text
 Browser
   ├── Cloudflare Pages   React + Vite static build
-  ├── Render             Express API + Socket.IO + Prisma
+  ├── Render             Express API + Prisma
   └── Neon               PostgreSQL
 ```
 
 - Client and API deploy separately.
-- API needs a long-running process for Socket.IO and local uploads.
+- API needs a long-running process for the REST API and local uploads.
 - Evidence files live on Render's ephemeral disk.
 
 ### Repository layout
@@ -36,7 +59,7 @@ Browser
 ```text
 pinproof/
 ├── client/          React + Vite frontend
-├── server/          Express + Prisma + Socket.IO API
+├── server/          Express + Prisma API
 ├── DEPLOYMENT.md    This guide
 └── README.md        Product and local setup
 ```
@@ -233,7 +256,6 @@ Never use `migrate dev` or `db push` against production.
 ```env
 NODE_VERSION=22
 VITE_API_URL=https://your-api.onrender.com/api
-VITE_WS_URL=https://your-api.onrender.com
 ```
 
 5. Deploy.
@@ -260,7 +282,7 @@ https://pinproof.pages.dev
 - Framework: Vite
 - Build command: `npm run build`
 - Output directory: `dist`
-- Env vars: `NODE_VERSION`, `VITE_API_URL`, `VITE_WS_URL`
+- Env vars: `NODE_VERSION`, `VITE_API_URL`
 
 Add `client/vercel.json`:
 
@@ -333,7 +355,7 @@ If delivery fails:
 - [ ] Inspector can accept and start a visit.
 - [ ] Evidence upload works and the image renders.
 - [ ] Requester can approve the visit.
-- [ ] Socket.IO updates appear without refresh.
+- [ ] Live updates appear through HTTP polling without a manual refresh.
 - [ ] No CORS errors.
 - [ ] No proxy rate-limit errors in Render logs.
 
@@ -374,7 +396,6 @@ If delivery fails:
 | Variable | Required | Notes |
 |---|---|---|
 | `VITE_API_URL` | Yes | Must include `/api` |
-| `VITE_WS_URL` | Yes | API origin only |
 
 `VITE_*` values are baked in at build time. Rebuild after changing them.
 
@@ -431,7 +452,7 @@ Seeding is refused when `NODE_ENV=production`.
 - Local files are lost on redeploy, restart, or spin-down.
 - Single instance only.
 - In-process rate limits are per instance.
-- Socket.IO reconnects after a cold start.
+- Clients resume HTTP polling after a cold start.
 
 Optional: ping `/api/health` every 10 minutes with UptimeRobot. This consumes free hours.
 
@@ -456,10 +477,13 @@ Optional: ping `/api/health` every 10 minutes with UptimeRobot. This consumes fr
 - Adjust if your proxy chain differs.
 - Move to Redis for multiple instances.
 
-### Socket.IO
+### Live updates
 
-- One Render instance is fine.
-- Multiple instances need sticky sessions and a Redis adapter.
+- Updates use authenticated HTTP polling, so no persistent connections or
+  sticky sessions are required.
+- No WebSocket adapter is required.
+- The latest GPS point is cached in memory per instance; the database is the
+  fallback after a restart or when a request lands on another instance.
 
 ### CORS
 
@@ -478,7 +502,7 @@ Optional: ping `/api/health` every 10 minutes with UptimeRobot. This consumes fr
 | `prisma: not found` | Dev dependencies skipped | Use `npm ci --include=dev` |
 | Migration fails | Pooled Neon connection | Use direct connection |
 | CORS error | `CLIENT_URL` mismatch | Set exact origin; redeploy API |
-| Socket.IO fails | Wrong `VITE_WS_URL` | Set API origin; rebuild client |
+| Live updates fail | Wrong `VITE_API_URL` | Include `/api`; rebuild client |
 | OTP not received | Route not enabled, low balance, or DLT mismatch | Check Fast2SMS dashboard, API key, route, sender, and template |
 | Fast2SMS 412 | Invalid API key | Copy the key again; remove spaces |
 | Fast2SMS 416 | Low wallet balance | Recharge the Fast2SMS wallet |
@@ -502,7 +526,7 @@ Before real users:
 - [ ] Use a paid Render instance or persistent host.
 - [ ] Use managed Postgres with backups.
 - [ ] Complete DLT registration for Fast2SMS DLT routes.
-- [ ] Move rate limits and Socket.IO state to Redis.
+- [ ] Move rate limits to Redis.
 - [ ] Move JWT storage to httpOnly cookies with CSRF protection.
 - [ ] Add malware scanning and image re-encoding.
 - [ ] Add security headers and a CSP.
@@ -603,7 +627,7 @@ No changes were made to OTP generation/verification, Prisma schema, or the visit
 - Object storage for evidence.
 - Production-safe demo mode.
 - Pooled Neon connections plus `directUrl`.
-- Redis for rate limits and Socket.IO.
+- Redis for rate limits.
 - httpOnly cookie auth.
 - DLT registration for Fast2SMS.
 

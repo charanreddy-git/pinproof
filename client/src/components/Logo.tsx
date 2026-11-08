@@ -25,9 +25,9 @@ function Mark({
     ? "bg-white"
     : isAccent
       ? "bg-accent-400"
-      : "bg-primary-800";
-  const pin = isInverse ? "#0f4a30" : isAccent ? "#0f4a30" : "#ffffff";
-  const tick = isInverse ? "#d29500" : "#ffc400";
+      : "bg-accent-400";
+  const pin = "var(--color-primary-950)";
+  const tick = isInverse ? "var(--color-surface-50)" : "var(--color-accent-400)";
 
   return (
     <span

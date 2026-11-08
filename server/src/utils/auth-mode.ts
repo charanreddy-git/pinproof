@@ -6,7 +6,7 @@ export type DemoRole = "USER" | "CAPTAIN";
 
 /**
  * Demo accounts are deliberately hard-coded. They are only ever created or
- * returned while AUTH_MODE=demo outside production.
+ * returned while AUTH_MODE=demo. Production additionally requires PUBLIC_DEMO=true.
  */
 export const DEMO_ACCOUNTS = {
   USER: {
@@ -22,7 +22,7 @@ export const DEMO_ACCOUNTS = {
 let warnedAboutInvalidMode = false;
 
 export function isDemoAuthEnabled(): boolean {
-  if (process.env.NODE_ENV === "production") return false;
+  if (process.env.NODE_ENV === "production" && process.env.PUBLIC_DEMO !== "true") return false;
 
   const configured = process.env.AUTH_MODE?.trim().toLowerCase();
 
@@ -46,7 +46,7 @@ export function getAuthMode(): AuthMode {
 export function requireDemoAuth(): void {
   if (!isDemoAuthEnabled()) {
     throw ApiError.forbidden(
-      "Demo authentication is disabled. Set AUTH_MODE=demo in a non-production environment to use it."
+      "Demo authentication is disabled."
     );
   }
 }

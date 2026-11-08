@@ -1,3 +1,4 @@
+import path from "node:path";
 import { prisma } from "../lib";
 import {
   ApiError,
@@ -7,6 +8,7 @@ import {
 } from "../utils";
 import type { CreateTaskInput, SubmitTaskInput } from "../validators";
 import { TaskStatus } from "@prisma/client";
+import { LocationService } from "./location.service";
 
 /** Safe shape for public/open task listings — no phone number. */
 const publicUserSelect = {
@@ -34,6 +36,9 @@ export class TaskService {
   static async createTask(userId: string, input: CreateTaskInput) {
     return prisma.task.create({
       data: {
+        visitPlan: input.visitPlan,
+        quotedPricePaise: input.visitPlan === "DETAILED" ? 249900 : 99900,
+        propertyType: input.propertyType,
         title: input.title,
         description: input.description,
         targetLat: input.latitude,
@@ -181,6 +186,38 @@ export class TaskService {
     return task;
   }
 
+  static async getLatestLocation(taskId: string, userId: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw ApiError.notFound("Visit not found");
+    if (task.createdById !== userId && task.acceptedById !== userId) throw ApiError.forbidden("You do not have access to this location");
+    return LocationService.getLatestLocation(taskId);
+  }
+
+  static async getEvidence(taskId: string, userId: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw ApiError.notFound("Visit not found");
+    if (task.createdById !== userId && task.acceptedById !== userId) {
+      throw ApiError.forbidden("You do not have access to this proof");
+    }
+    const evidence = await prisma.evidence.findUnique({ where: { taskId } });
+    if (evidence) return { data: evidence.data, contentType: evidence.contentType };
+    return { path: await TaskService.getEvidencePath(taskId, userId) };
+  }
+
+  static async getEvidencePath(taskId: string, userId: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw ApiError.notFound("Visit not found");
+    if (task.createdById !== userId && task.acceptedById !== userId) {
+      throw ApiError.forbidden("You do not have access to this proof");
+    }
+    if (!task.evidenceImage) throw ApiError.notFound("Proof not available yet");
+    const filename = path.basename(task.evidenceImage);
+    if (task.evidenceImage !== `/uploads/${filename}` || !filename) {
+      throw ApiError.notFound("Proof not available");
+    }
+    return path.join(__dirname, "../../uploads", filename);
+  }
+
   /**
    * Captain accepts a task (OPEN → ACCEPTED).
    * Uses a transaction to prevent two captains accepting the same task simultaneously.
@@ -247,7 +284,8 @@ export class TaskService {
     taskId: string,
     captainId: string,
     input: SubmitTaskInput,
-    imagePath: string
+    imagePath: string,
+    evidence?: { data: Buffer; contentType: string }
   ) {
     const task = await prisma.task.findUnique({ where: { id: taskId } });
 
@@ -259,6 +297,15 @@ export class TaskService {
       throw ApiError.badRequest("Task must be IN_PROGRESS to submit evidence");
     }
 
+    if (input.evidenceSource === "CAMERA") {
+      const captured = input.capturedAt ? Date.parse(input.capturedAt) : NaN;
+      if (!Number.isFinite(captured) || captured > Date.now() + 60000 || Date.now() - captured > 15 * 60000) {
+        throw ApiError.badRequest("Take a fresh photo before submitting (within 15 minutes)");
+      }
+    }
+    if (input.accuracy == null || input.accuracy > MAX_DISTANCE_METERS) {
+      throw ApiError.badRequest("GPS accuracy must be within 100 metres. Refresh your location and try again.");
+    }
     const distance = haversineDistance(
       task.targetLat,
       task.targetLng,
@@ -272,33 +319,44 @@ export class TaskService {
       );
     }
 
-    const updated = await prisma.task.updateMany({
-      where: {
-        id: taskId,
-        acceptedById: captainId,
-        status: TaskStatus.IN_PROGRESS,
-      },
-      data: {
-        status: TaskStatus.SUBMITTED,
-        evidenceImage: imagePath,
-        evidenceLat: input.latitude,
-        evidenceLng: input.longitude,
-        evidenceAccuracy: input.accuracy ?? null,
-        evidenceCapturedAt: input.capturedAt
-          ? new Date(input.capturedAt)
-          : new Date(),
-        evidenceSubmittedAt: new Date(),
-      },
-    });
+    const save = async (db: Pick<typeof prisma, "task" | "evidence">) => {
+      const updated = await db.task.updateMany({
+        where: {
+          id: taskId,
+          acceptedById: captainId,
+          status: TaskStatus.IN_PROGRESS,
+        },
+        data: {
+          status: TaskStatus.SUBMITTED,
+          evidenceImage: imagePath,
+          evidenceLat: input.latitude,
+          evidenceLng: input.longitude,
+          evidenceAccuracy: input.accuracy ?? null,
+          evidenceSource: input.evidenceSource,
+          evidenceCapturedAt: input.evidenceSource === "CAMERA" && input.capturedAt ? new Date(input.capturedAt) : null,
+          evidenceSubmittedAt: new Date(),
+        },
+      });
 
-    if (updated.count === 0) {
-      throw ApiError.badRequest("Task must be IN_PROGRESS to submit evidence");
-    }
+      if (updated.count === 0) {
+        throw ApiError.badRequest("Task must be IN_PROGRESS to submit evidence");
+      }
 
-    return prisma.task.findUniqueOrThrow({
-      where: { id: taskId },
-      include: taskWithUsers,
-    });
+      if (evidence) {
+        const stored = { data: new Uint8Array(evidence.data), contentType: evidence.contentType };
+        await db.evidence.upsert({
+          where: { taskId },
+          create: { taskId, ...stored },
+          update: stored,
+        });
+      }
+      return db.task.findUniqueOrThrow({
+        where: { id: taskId },
+        include: taskWithUsers,
+      });
+    };
+    // Photo bytes and the SUBMITTED transition commit together.
+    return evidence ? prisma.$transaction(save) : save(prisma);
   }
 
   /**

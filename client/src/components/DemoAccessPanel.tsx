@@ -68,7 +68,7 @@ export function DemoAccessPanel({ returnTo }: DemoAccessPanelProps) {
     <div className="mb-6 rounded-2xl border border-accent-200 bg-accent-50/80 p-4">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent-200 text-accent-800">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7Z" />
           </svg>
         </span>
@@ -93,7 +93,7 @@ export function DemoAccessPanel({ returnTo }: DemoAccessPanelProps) {
               type="button"
               onClick={() => void handleDemoLogin(role)}
               disabled={loadingRole !== null}
-              className="group flex min-h-14 w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-surface-200 bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-card disabled:cursor-wait disabled:opacity-60"
+              className="group flex min-h-14 w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-surface-200 bg-white px-3 py-2.5 text-left shadow-sm transition-colors hover:border-primary-300 hover:shadow-card disabled:cursor-wait disabled:opacity-60"
             >
               <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${copy.tint}`}>
                 <Icon size={17} />
@@ -118,7 +118,7 @@ export function DemoAccessPanel({ returnTo }: DemoAccessPanelProps) {
       </div>
 
       <p className="mt-2.5 text-[10.5px] font-medium text-accent-800/80">
-        Demo mode is server-controlled and never available in production.
+        Shared demo accounts. Visits may be reset by other visitors.
       </p>
     </div>
   );

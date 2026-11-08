@@ -7,6 +7,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   AuthMode,
   AuthResponse,
@@ -24,7 +25,6 @@ import {
   resetDemoApi,
   verifyOtpApi,
 } from "../services";
-import { connectSocket, disconnectSocket } from "../sockets";
 
 interface VerifyOtpOptions {
   name?: string;
@@ -38,6 +38,7 @@ interface AuthContextType {
   isLoading: boolean;
   authMode: AuthMode;
   authModeReady: boolean;
+  phoneSignInEnabled: boolean;
   demoAccounts: DemoAccount[];
   requestOtp: (phone: string) => Promise<OtpRequestResponse>;
   verifyOtp: (
@@ -81,14 +82,15 @@ function readSavedSession(): AuthSession {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<AuthSession>(readSavedSession);
   const [authMode, setAuthMode] = useState<AuthMode>("otp");
   const [authModeReady, setAuthModeReady] = useState(false);
+  const [phoneSignInEnabled, setPhoneSignInEnabled] = useState(true);
   const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
   const { user, token } = session;
 
-  // The server is the source of truth for demo mode. In production it always
-  // reports "otp", even if AUTH_MODE=demo is set in the environment.
+  // The server is the source of truth for explicitly enabled demo deployments.
   useEffect(() => {
     let active = true;
 
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((result) => {
         if (!active) return;
         setAuthMode(result.mode);
+        setPhoneSignInEnabled(result.phoneSignInEnabled !== false);
         setDemoAccounts(result.demo);
         setAuthModeReady(true);
       })
@@ -111,21 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Socket connection is an external system, so it belongs in an effect.
-  // The session itself is restored synchronously from localStorage.
-  useEffect(() => {
-    if (token) {
-      connectSocket(token);
-    } else {
-      disconnectSocket();
-    }
-  }, [token]);
-
   const saveSession = useCallback((result: AuthResponse) => {
+    queryClient.clear();
     setSession({ user: result.user, token: result.token });
     localStorage.setItem("token", result.token);
     localStorage.setItem("user", JSON.stringify(result.user));
-  }, []);
+  }, [queryClient]);
 
   const requestOtp = useCallback(async (phone: string) => {
     return requestOtpApi(phone);
@@ -156,10 +150,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    queryClient.clear();
     setSession({ user: null, token: null });
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-  }, []);
+  }, [queryClient]);
 
   return (
     <AuthContext.Provider
@@ -170,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         authMode,
         authModeReady,
+        phoneSignInEnabled,
         demoAccounts,
         requestOtp,
         verifyOtp,

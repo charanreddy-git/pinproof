@@ -3,18 +3,24 @@ import type { TaskStatus } from "../types";
 
 interface VisitProgressProps {
   status: TaskStatus;
+  tone?: "light" | "dark";
   className?: string;
 }
 
 /**
- * A compact, Rapido-style progress track. It answers two questions at a
- * glance: where the visit is now, and what happens next.
+ * A compact progress track. It answers two questions at a glance: where the
+ * visit is now, and what happens next.
  */
-export function VisitProgress({ status, className = "" }: VisitProgressProps) {
+export function VisitProgress({
+  status,
+  tone = "light",
+  className = "",
+}: VisitProgressProps) {
   const current = STATUS_ORDER[status];
   const currentStep = TASK_STEPS[current];
   const nextStep = TASK_STEPS[current + 1];
   const isDone = status === "COMPLETED";
+  const dark = tone === "dark";
 
   return (
     <div className={className}>
@@ -32,21 +38,35 @@ export function VisitProgress({ status, className = "" }: VisitProgressProps) {
             key={step.status}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
               index < current
-                ? "bg-primary-600"
+                ? dark
+                  ? "bg-accent-500"
+                  : "bg-primary-600"
                 : index === current
                   ? isDone
-                    ? "bg-primary-600"
+                    ? dark
+                      ? "bg-accent-500"
+                      : "bg-primary-600"
                     : "bg-accent-400"
-                  : "bg-surface-200"
+                  : dark
+                    ? "bg-white/20"
+                    : "bg-surface-200"
             }`}
           />
         ))}
       </div>
       <div className="mt-2 flex items-center justify-between gap-3">
-        <p className="text-[11px] font-bold text-surface-900">
+        <p
+          className={`text-[13px] font-bold ${
+            dark ? "text-white" : "text-surface-900"
+          }`}
+        >
           {isDone ? "Completed" : currentStep.label}
         </p>
-        <p className="truncate text-[10px] font-semibold text-surface-500">
+        <p
+          className={`truncate text-[13px] font-semibold ${
+            dark ? "text-primary-200" : "text-surface-500"
+          }`}
+        >
           {isDone ? "All done" : nextStep ? `Next: ${nextStep.label}` : "Final step"}
         </p>
       </div>

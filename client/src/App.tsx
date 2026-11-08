@@ -1,26 +1,26 @@
+import { lazy, Suspense } from "react";
+import { PageLoader } from "./components/ui";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider } from "./contexts";
 import { ToastProvider, ProtectedRoute, ErrorBoundary, RouteEffects, DemoToolbar } from "./components";
 import { AuthLayout, DashboardLayout } from "./layouts";
-import { LoginPage, RegisterPage } from "./pages/auth";
-import {
-  UserDashboard,
-  UserVisitsPage,
-  CreateTaskPage,
-  UserTaskDetail,
-  TrackCaptainPage,
-} from "./pages/user";
-import {
-  CaptainDashboard,
-  AcceptedTasksPage,
-  CaptainTaskDetail,
-  UploadEvidencePage,
-  CaptainLandingPage,
-} from "./pages/captain";
-import { RequesterLandingPage } from "./pages/verify";
-import { LandingPage, NotFoundPage } from "./pages";
+import { NotFoundPage } from "./pages/NotFoundPage";
+const LoginPage = lazy(() => import("./pages/auth/LoginPage").then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then((module) => ({ default: module.RegisterPage })));
+const UserDashboard = lazy(() => import("./pages/user/UserDashboard").then((module) => ({ default: module.UserDashboard })));
+const UserVisitsPage = lazy(() => import("./pages/user/UserVisitsPage").then((module) => ({ default: module.UserVisitsPage })));
+const CreateTaskPage = lazy(() => import("./pages/user/CreateTaskPage").then((module) => ({ default: module.CreateTaskPage })));
+const UserTaskDetail = lazy(() => import("./pages/user/UserTaskDetail").then((module) => ({ default: module.UserTaskDetail })));
+const TrackCaptainPage = lazy(() => import("./pages/user/TrackCaptainPage").then((module) => ({ default: module.TrackCaptainPage })));
+const CaptainDashboard = lazy(() => import("./pages/captain/CaptainDashboard").then((module) => ({ default: module.CaptainDashboard })));
+const AcceptedTasksPage = lazy(() => import("./pages/captain/AcceptedTasksPage").then((module) => ({ default: module.AcceptedTasksPage })));
+const CaptainTaskDetail = lazy(() => import("./pages/captain/CaptainTaskDetail").then((module) => ({ default: module.CaptainTaskDetail })));
+const UploadEvidencePage = lazy(() => import("./pages/captain/UploadEvidencePage").then((module) => ({ default: module.UploadEvidencePage })));
+const CaptainLandingPage = lazy(() => import("./pages/captain/CaptainLandingPage").then((module) => ({ default: module.CaptainLandingPage })));
+const RequesterLandingPage = lazy(() => import("./pages/verify/RequesterLandingPage").then((module) => ({ default: module.RequesterLandingPage })));
+const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({ default: module.LandingPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,7 +40,7 @@ function App() {
           <RouteEffects />
           <AuthProvider>
             <ToastProvider>
-              <Routes>
+              <Suspense fallback={<PageLoader />}><Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/verify" element={<RequesterLandingPage />} />
@@ -92,7 +92,7 @@ function App() {
 
                 {/* Catch-all 404 */}
                 <Route path="*" element={<NotFoundPage />} />
-              </Routes>
+              </Routes></Suspense>
               <DemoToolbar />
             </ToastProvider>
           </AuthProvider>

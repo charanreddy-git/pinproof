@@ -8,11 +8,11 @@ export function ProofStandardCard() {
   return (
     <div className="rounded-xl border border-primary-800 bg-primary-950 p-5 text-white sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-accent-300">
+        <p className="flex items-center gap-2 text-sm font-semibold text-accent-300">
           <ShieldCheckIcon size={13} />
           The PinProof standard
         </p>
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent-300">
+        <span className="text-sm font-semibold text-accent-300">
           Server-checked
         </span>
       </div>
@@ -25,15 +25,15 @@ export function ProofStandardCard() {
       </div>
 
       <p className="mt-4 text-[1.15rem] font-bold leading-snug">
-        The furthest a proof photo can be from your pin.
+        Required device GPS radius when submitting.
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-white/10 pt-3">
         {[
           "Rejected outside 100 m",
-          "GPS and time saved",
+          "Submission GPS saved",
           "Private to your account",
-          "Not a forwarded photo",
+          "Capture method shown",
         ].map((item) => (
           <p
             key={item}

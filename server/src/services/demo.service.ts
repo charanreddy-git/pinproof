@@ -1,5 +1,3 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "../lib";
 import {
   DEMO_ACCOUNTS,
@@ -21,7 +19,6 @@ const userSelect = {
 } as const;
 
 const DEMO_EVIDENCE_PATH = "/uploads/demo-proof.svg";
-const DEMO_EVIDENCE_FILE = "demo-proof.svg";
 
 const DEMO_EVIDENCE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Illustrative sample photo of a low-rise house, compound wall, and gate">
   <defs>
@@ -129,29 +126,13 @@ async function ensureDemoUser(role: DemoRole) {
   return { user: transform(user), isNew: !existing };
 }
 
-async function ensureEvidenceFile(): Promise<void> {
-  const uploadsDir = path.join(process.cwd(), "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-  await writeFile(path.join(uploadsDir, DEMO_EVIDENCE_FILE), DEMO_EVIDENCE_SVG);
-}
-
-async function removeEvidenceFile(imagePath: string | null): Promise<void> {
-  if (!imagePath) return;
-
-  const filename = path.basename(imagePath);
-  if (filename !== DEMO_EVIDENCE_FILE && !filename.startsWith("demo-")) return;
-
-  await unlink(path.join(process.cwd(), "uploads", filename)).catch(() => {
-    // The reset still succeeds if a file was already removed by hand.
-  });
-}
-
 export class DemoService {
   static async getMode() {
     const mode = getAuthMode();
 
     return {
       mode,
+      phoneSignInEnabled: process.env.PUBLIC_DEMO !== "true",
       demo:
         mode === "demo"
           ? Object.entries(DEMO_ACCOUNTS).map(([role, account]) => ({
@@ -186,10 +167,7 @@ export class DemoService {
 
     const existingTasks = await prisma.task.findMany({
       where: {
-        OR: [
-          { createdById: requester.user.id },
-          { acceptedById: inspector.user.id },
-        ],
+        createdById: requester.user.id,
       },
       select: { id: true, evidenceImage: true },
     });
@@ -202,11 +180,6 @@ export class DemoService {
       });
       await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
     }
-
-    await Promise.all(
-      existingTasks.map((task) => removeEvidenceFile(task.evidenceImage))
-    );
-    await ensureEvidenceFile();
 
     await prisma.phoneOtp.deleteMany({
       where: {
@@ -226,6 +199,8 @@ export class DemoService {
           targetLng: 77.7499,
           createdById: requester.user.id,
           status: "OPEN",
+          visitPlan: "STANDARD",
+          quotedPricePaise: 99900,
         },
         {
           title: "Construction progress — Sarjapur",
@@ -236,6 +211,8 @@ export class DemoService {
           createdById: requester.user.id,
           acceptedById: inspector.user.id,
           status: "ACCEPTED",
+          visitPlan: "DETAILED",
+          quotedPricePaise: 249900,
         },
         {
           title: "2BHK rental check — Indiranagar",
@@ -246,6 +223,9 @@ export class DemoService {
           createdById: requester.user.id,
           acceptedById: inspector.user.id,
           status: "SUBMITTED",
+          visitPlan: "STANDARD",
+          quotedPricePaise: 99900,
+          evidenceSource: "CAMERA",
           evidenceImage: DEMO_EVIDENCE_PATH,
           evidenceLat: 12.97182,
           evidenceLng: 77.64135,
@@ -262,6 +242,9 @@ export class DemoService {
           createdById: requester.user.id,
           acceptedById: inspector.user.id,
           status: "COMPLETED",
+          visitPlan: "STANDARD",
+          quotedPricePaise: 99900,
+          evidenceSource: "CAMERA",
           evidenceImage: DEMO_EVIDENCE_PATH,
           evidenceLat: 12.93084,
           evidenceLng: 77.58372,
@@ -272,6 +255,18 @@ export class DemoService {
           updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
         },
       ],
+    });
+
+    const proofs = await prisma.task.findMany({
+      where: { createdById: requester.user.id, evidenceImage: DEMO_EVIDENCE_PATH },
+      select: { id: true },
+    });
+    await prisma.evidence.createMany({
+      data: proofs.map(({ id }) => ({
+        taskId: id,
+        data: Buffer.from(DEMO_EVIDENCE_SVG),
+        contentType: "image/svg+xml",
+      })),
     });
 
     logger.info("Demo data reset", { tasks: 4 });
