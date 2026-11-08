@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --prefix client --include=dev && npm ci --prefix server --include=dev",
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "api/[...path].ts": { "maxDuration": 30, "includeFiles": "server/{src,prisma,node_modules}/**" },
+    "api/auth/[...path].ts": { "maxDuration": 30, "includeFiles": "server/{src,prisma,node_modules}/**" },
+    "api/tasks/index.ts": { "maxDuration": 30, "includeFiles": "server/{src,prisma,node_modules}/**" },
+    "api/tasks/[id]/[[...path]].ts": { "maxDuration": 30, "includeFiles": "server/{src,prisma,node_modules}/**" }
+  },
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
