@@ -34,3 +34,5 @@ npm-debug.log*
 *.tsbuildinfo
 .vercel
 .env*
+test-results/
+playwright-report/

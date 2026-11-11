@@ -17,6 +17,8 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 function getTitle(pathname: string): string {
+  if (pathname.endsWith("/account")) return "Your account — PinProof";
+  if (pathname.endsWith("/report")) return "Property visit report — PinProof";
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
   if (pathname.startsWith("/captain/tasks/") && pathname.endsWith("/upload")) return "Submit proof — PinProof";
   if (pathname.startsWith("/user/tasks/")) return "Visit details — PinProof";

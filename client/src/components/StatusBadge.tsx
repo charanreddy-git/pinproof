@@ -35,6 +35,10 @@ const statusConfig: Record<
     classes: "border-success-100 bg-success-50 text-success-700",
     dot: "bg-success-500",
   },
+  CANCELLED: {
+    label: "Cancelled", shortLabel: "Cancelled",
+    classes: "border-surface-200 bg-surface-100 text-surface-600", dot: "bg-surface-500",
+  },
 };
 
 interface StatusBadgeProps {

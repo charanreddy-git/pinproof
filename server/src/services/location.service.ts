@@ -9,12 +9,6 @@ export interface LocationSnapshot {
   timestamp: string;
 }
 
-// Live location is served from memory between persisted log writes. The database
-// remains the source of truth after a restart; entries here are process-local.
-const latestLocations = new Map<string, LocationSnapshot>();
-const lastLocationLog = new Map<string, number>();
-const LOCATION_LOG_INTERVAL_MS = 60_000;
-
 export class LocationService {
   /**
    * Check that the inspector is assigned to this visit and that it is currently
@@ -59,8 +53,8 @@ export class LocationService {
   }
 
   /**
-   * Validates an inspector, keeps the latest point in memory for polling, and
-   * persists a location log at most once per minute per inspector/task.
+   * Persist before acknowledging so reconnects and separate API instances see
+   * the same position. The browser sends at most one update every five seconds.
    */
   static async recordLocation(
     captainId: string,
@@ -74,30 +68,17 @@ export class LocationService {
       longitude: input.longitude,
       timestamp: new Date().toISOString(),
     };
-    latestLocations.set(input.taskId, snapshot);
-
-    const now = Date.now();
-    const throttleKey = `${captainId}:${input.taskId}`;
-    const lastLogTime = lastLocationLog.get(throttleKey) ?? 0;
-
-    if (process.env.VERCEL || now - lastLogTime > LOCATION_LOG_INTERVAL_MS) {
-      await LocationService.logLocation(captainId, input);
-      lastLocationLog.set(throttleKey, now);
-    }
+    await LocationService.logLocation(captainId, input);
 
     return snapshot;
   }
 
   /**
-   * Latest authorized location for a visit. Prefers the in-memory update from
-   * the current process and falls back to the most recent persisted log.
+   * Latest authorized location, including after an API restart.
    */
   static async getLatestLocation(
     taskId: string
   ): Promise<LocationSnapshot | null> {
-    const live = latestLocations.get(taskId);
-    if (live && !process.env.VERCEL) return live;
-
     const persisted = await prisma.locationLog.findFirst({
       where: { taskId },
       orderBy: { timestamp: "desc" },

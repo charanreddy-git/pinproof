@@ -12,7 +12,8 @@
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "tsx --test tests/integration/*.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

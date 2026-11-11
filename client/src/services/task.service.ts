@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ApiResponse, Coordinates, Task, CreateTaskInput } from "../types";
+import type { ApiResponse, Coordinates, Task, CreateTaskInput, UpdateTaskInput } from "../types";
 
 export async function fetchTasks(
   filter?: string,
@@ -52,5 +52,15 @@ export async function submitTask(
 
 export async function completeTask(id: string): Promise<Task> {
   const { data } = await api.post<ApiResponse<Task>>(`/tasks/${id}/complete`);
+  return data.data;
+}
+
+export async function updateTask(id: string, input: UpdateTaskInput): Promise<Task> {
+  const { data } = await api.patch<ApiResponse<Task>>(`/tasks/${id}`, input);
+  return data.data;
+}
+
+export async function changeTask(id: string, action: "cancel" | "release" | "revision", reason: string): Promise<Task> {
+  const { data } = await api.post<ApiResponse<Task>>(`/tasks/${id}/${action}`, { reason });
   return data.data;
 }

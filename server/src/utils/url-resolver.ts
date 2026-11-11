@@ -5,6 +5,8 @@ import { URL } from "url";
 import { ApiError } from "./api-error";
 
 const GOOGLE_MAPS_HOSTS = new Set([
+  "google.com",
+  "google.co.in",
   "maps.google.com",
   "www.google.com",
   "maps.google.co.in",
@@ -13,14 +15,15 @@ const GOOGLE_MAPS_HOSTS = new Set([
   "maps.app.goo.gl",
 ]);
 
-function parseCoordinates(
+export function parseCoordinates(
   url: string
 ): { latitude: number; longitude: number } | null {
+  try { url = decodeURIComponent(url); } catch { return null; }
   const patterns: RegExp[] = [
-    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /[?&](?:q|ll|cbll)=(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /[?&](?:query|q|ll|cbll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /\/place\/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
   ];
 
   for (const pattern of patterns) {
@@ -28,7 +31,7 @@ function parseCoordinates(
     if (match) {
       const lat = parseFloat(match[1]);
       const lng = parseFloat(match[2]);
-      if (!isNaN(lat) && !isNaN(lng)) {
+      if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
         return { latitude: lat, longitude: lng };
       }
     }
@@ -41,7 +44,7 @@ function isGoogleMapsUrl(raw: string): boolean {
   try {
     const parsed = new URL(raw);
     const host = parsed.hostname.toLowerCase();
-    return GOOGLE_MAPS_HOSTS.has(host) || host.endsWith(".google.com");
+    return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password && !parsed.port && GOOGLE_MAPS_HOSTS.has(host);
   } catch {
     return false;
   }
@@ -54,6 +57,7 @@ async function followRedirects(
   let currentUrl = urlStr;
 
   for (let i = 0; i < maxRedirects; i++) {
+    if (!isGoogleMapsUrl(currentUrl)) throw ApiError.badRequest("The link redirected outside Google Maps.");
     let parsed: URL;
     try {
       parsed = new URL(currentUrl);

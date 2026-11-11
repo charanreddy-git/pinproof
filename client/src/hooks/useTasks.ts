@@ -8,8 +8,10 @@ import {
   startTask,
   submitTask,
   completeTask,
+  updateTask,
+  changeTask,
 } from "../services/task.service";
-import type { Coordinates, CreateTaskInput } from "../types";
+import type { Coordinates, CreateTaskInput, UpdateTaskInput } from "../types";
 
 // HTTP polling replaces the previous real-time socket updates.
 const TASK_LIST_POLL_INTERVAL_MS = 15_000;
@@ -43,7 +45,7 @@ export function useTaskDetail(id: string) {
     queryFn: () => fetchTaskById(id),
     enabled: !!id && !!user,
     refetchInterval: (query) =>
-      query.state.data?.status === "COMPLETED"
+      ["COMPLETED", "CANCELLED"].includes(query.state.data?.status ?? "")
         ? false
         : TASK_DETAIL_POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
@@ -99,5 +101,21 @@ export function useCompleteTask() {
   return useMutation({
     mutationFn: (id: string) => completeTask(id),
     onSuccess: (_, id) => invalidate(id),
+  });
+}
+
+export function useUpdateTask() {
+  const invalidate = useTaskInvalidation();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateTaskInput }) => updateTask(id, input),
+    onSuccess: (_, { id }) => invalidate(id),
+  });
+}
+
+export function useChangeTask() {
+  const invalidate = useTaskInvalidation();
+  return useMutation({
+    mutationFn: ({ id, action, reason }: { id: string; action: "cancel" | "release" | "revision"; reason: string }) => changeTask(id, action, reason),
+    onSuccess: (_, { id }) => invalidate(id),
   });
 }

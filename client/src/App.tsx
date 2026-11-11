@@ -21,6 +21,8 @@ const UploadEvidencePage = lazy(() => import("./pages/captain/UploadEvidencePage
 const CaptainLandingPage = lazy(() => import("./pages/captain/CaptainLandingPage").then((module) => ({ default: module.CaptainLandingPage })));
 const RequesterLandingPage = lazy(() => import("./pages/verify/RequesterLandingPage").then((module) => ({ default: module.RequesterLandingPage })));
 const LandingPage = lazy(() => import("./pages/LandingPage").then((module) => ({ default: module.LandingPage })));
+const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
+const VisitReportPage = lazy(() => import("./pages/VisitReportPage").then((module) => ({ default: module.VisitReportPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +55,8 @@ function App() {
                 </Route>
 
                 {/* User routes */}
+                <Route path="/user/tasks/:id/report" element={<ProtectedRoute allowedRoles={["USER"]}><VisitReportPage /></ProtectedRoute>} />
+                <Route path="/captain/tasks/:id/report" element={<ProtectedRoute allowedRoles={["CAPTAIN"]}><VisitReportPage /></ProtectedRoute>} />
                 <Route
                   element={
                     <ProtectedRoute allowedRoles={["USER"]}>
@@ -61,6 +65,7 @@ function App() {
                   }
                 >
                   <Route path="/user" element={<UserDashboard />} />
+                  <Route path="/user/account" element={<AccountPage />} />
                   <Route path="/user/create-task" element={<CreateTaskPage />} />
                   <Route path="/user/tasks" element={<UserVisitsPage />} />
                   <Route path="/user/tasks/:id" element={<UserTaskDetail />} />
@@ -76,6 +81,7 @@ function App() {
                   }
                 >
                   <Route path="/captain/dashboard" element={<CaptainDashboard />} />
+                  <Route path="/captain/account" element={<AccountPage />} />
                   <Route
                     path="/captain/accepted"
                     element={<AcceptedTasksPage />}

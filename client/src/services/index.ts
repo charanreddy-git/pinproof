@@ -5,6 +5,8 @@ export {
   resetDemoApi,
   requestOtpApi,
   verifyOtpApi,
+  fetchProfileApi,
+  updateProfileApi,
 } from "./auth.service";
 export {
   fetchTasks,

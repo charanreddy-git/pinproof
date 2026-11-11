@@ -33,6 +33,12 @@ export const verifyOtpSchema = z.object({
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 
+export const profileSchema = z.object({
+  name: nameSchema,
+  email: z.union([z.email().max(254), z.literal("")]).nullish(),
+});
+export type ProfileInput = z.infer<typeof profileSchema>;
+
 export const demoLoginSchema = z.object({
   role: roleSchema,
 });

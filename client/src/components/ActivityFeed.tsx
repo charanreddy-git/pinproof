@@ -20,6 +20,7 @@ const EVENT_COPY: Record<
   TaskStatus,
   { label: string; tone: string; icon: typeof ClockIcon }
 > = {
+  CANCELLED: { label: "Visit cancelled", tone: "bg-surface-100 text-surface-500", icon: ClockIcon },
   OPEN: {
     label: "Request sent. Finding an inspector.",
     tone: "bg-surface-100 text-surface-500",

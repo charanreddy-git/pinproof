@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useMenuKeyboard } from "../hooks/useMenuKeyboard";
-import { useAuth } from "../contexts";
+import { useAuth, LiveLocationProvider } from "../contexts";
 import { useTaskList } from "../hooks";
 import {
   PlusIcon,
@@ -15,6 +15,7 @@ import {
 } from "../components/Icons";
 import { Logo, LogoMark, TaskNotifications } from "../components";
 import { formatPhone } from "../utils/phone";
+import { InspectorLocationSharing } from "../components/InspectorLocationSharing";
 
 const userNav = [
   { to: "/user", label: "Home", icon: HomeIcon, end: true },
@@ -133,7 +134,7 @@ export function DashboardLayout() {
     location.pathname === "/captain/accepted";
 
   const activeTasks = tasks.filter(
-    (task) => task.status !== "COMPLETED" && task.status !== "OPEN"
+    (task) => ["ACCEPTED", "IN_PROGRESS", "SUBMITTED"].includes(task.status)
   );
   const needsReview = tasks.filter((task) => task.status === "SUBMITTED").length;
   const availableNow = tasks.filter((task) => task.status === "OPEN").length;
@@ -145,6 +146,7 @@ export function DashboardLayout() {
   };
 
   const pageTitle = (() => {
+    if (location.pathname.endsWith("/account")) return "Your account";
     if (location.pathname === "/user/create-task") return "Book a visit";
     if (location.pathname.startsWith("/user/tasks/")) return "Visit details";
     if (location.pathname.startsWith("/user/track/")) return "Live tracking";
@@ -171,7 +173,8 @@ export function DashboardLayout() {
   const mobileNavItems = isInspector ? captainNav : userNav.filter((item) => item.to !== "/user/create-task");
 
   return (
-    <div className="app-ambient min-h-screen">
+    <LiveLocationProvider active={isInspector && (!!inProgressTask || location.pathname.endsWith("/upload"))}>
+      <div className="app-ambient min-h-screen">
       <a
         href="#main-content"
         className="sr-only z-[200] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-xl focus:bg-primary-900 focus:px-4 focus:text-[13px] focus:font-bold focus:text-white"
@@ -242,6 +245,8 @@ export function DashboardLayout() {
             );
           })}
         </nav>
+
+        <NavLink to={isInspector ? "/captain/account" : "/user/account"} className="mx-3 mt-2 flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-surface-600 hover:bg-surface-50"><UserIcon size={18} />Your account</NavLink>
 
         <div className="mt-auto">
           <div className="border-t border-surface-100 px-3 py-3">
@@ -328,6 +333,7 @@ export function DashboardLayout() {
                           {user?.phone ? formatPhone(user.phone) : null}
                         </p>
                       </div>
+                      <NavLink to={isInspector ? "/captain/account" : "/user/account"} onClick={() => setAccountOpen(false)} role="menuitem" className="flex min-h-11 items-center gap-2.5 px-4 text-sm font-semibold text-surface-600 hover:bg-surface-50"><UserIcon size={15} />Your account</NavLink>
                       <NavLink
                         to={isInspector ? "/captain/accepted" : "/user/tasks"}
                         onClick={() => setAccountOpen(false)}
@@ -362,6 +368,8 @@ export function DashboardLayout() {
             </div>
           </div>
         </header>
+
+        {isInspector && <InspectorLocationSharing key={user?.id} tasks={tasks} />}
 
         <main
           id="main-content"
@@ -426,6 +434,7 @@ export function DashboardLayout() {
           )}
         </nav>
       )}
-    </div>
+      </div>
+    </LiveLocationProvider>
   );
 }

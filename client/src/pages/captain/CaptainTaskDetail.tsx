@@ -2,7 +2,7 @@ import { targetIcon } from "../../components/MapIcons";
 import { MapView } from "../../components/MapView";
 import { formatVisitQuote } from "../../content/visitPlans";
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Button,
   StatusBadge,
@@ -20,9 +20,13 @@ import {
   ShieldCheckIcon,
   CopyIcon,
 } from "../../components";
-import { useTaskDetail, useStartTask, useAcceptTask, useGeolocation } from "../../hooks";
+import { useTaskDetail, useStartTask, useAcceptTask } from "../../hooks";
 import { EvidenceImage, EvidenceDownload } from "../../components/EvidenceImage";
 import { formatRelativeTime } from "../../utils/time";
+import { VisitManagement } from "../../components/VisitManagement";
+import { VisitHistory } from "../../components/VisitHistory";
+import { VisitReportSummary } from "../../components/VisitReportSummary";
+import { QueryNotice } from "../../components/QueryNotice";
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("en-IN", {
@@ -40,28 +44,19 @@ function visitRef(id: string): string {
 
 export function CaptainTaskDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: task, isLoading, isError } = useTaskDetail(id!);
+  const { data: task, isLoading, isError, refetch } = useTaskDetail(id!);
   const startTask = useStartTask();
   const acceptTask = useAcceptTask();
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { startTracking, isTracking } = useGeolocation();
-  const cleanupRef = useRef<(() => void) | null>(null);
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (cleanupRef.current) cleanupRef.current();
-    };
-  }, []);
 
   const handleStart = async () => {
     if (!task) return;
     try {
       await startTask.mutateAsync(task.id);
-      addToast("success", "Visit started. Location sharing is on.");
-      cleanupRef.current = startTracking(task.id);
+      addToast("success", "Visit started. Allow location access to share your trip.");
     } catch (err) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } }).response?.data?.message ||
@@ -96,7 +91,7 @@ export function CaptainTaskDetail() {
 
   if (isLoading) return <PageLoader />;
 
-  if (isError || !task) {
+  if (!task) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
         <p className="text-[14px] font-bold text-primary-700">Visit unavailable</p>
@@ -109,6 +104,7 @@ export function CaptainTaskDetail() {
         <Button to="/captain/dashboard" className="mt-6">
           Back to find work
         </Button>
+        <Button variant="secondary" className="mt-3" onClick={() => void refetch()}>Try again</Button>
       </div>
     );
   }
@@ -117,6 +113,7 @@ export function CaptainTaskDetail() {
 
   return (
     <div className="mx-auto max-w-6xl pb-24 sm:pb-0">
+      {isError && <QueryNotice retry={() => void refetch()} stale />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button to="/captain/dashboard" variant="ghost" size="sm" className="-ml-2 min-h-11">
           <span aria-hidden="true">←</span>
@@ -261,7 +258,7 @@ export function CaptainTaskDetail() {
                   className="group relative block w-full cursor-zoom-in bg-surface-950 p-2 text-left sm:p-3"
                   aria-label="Open the proof photo full screen"
                 >
-                  <EvidenceImage taskId={task.id}
+                  <EvidenceImage taskId={task.id} version={task.evidenceSubmittedAt}
                     alt="Proof submitted for this visit"
                     className="max-h-[30rem] w-full rounded-xl bg-surface-950 object-contain"
                   />
@@ -316,9 +313,11 @@ export function CaptainTaskDetail() {
               </div>
             </section>
           )}
+          <VisitReportSummary task={task} />
         </div>
 
         <aside className="space-y-5 lg:col-span-5">
+          <VisitManagement task={task} />
           <section className="rounded-3xl bg-primary-900 p-5 text-white shadow-card">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[13px] font-bold text-accent-300">Next step</p>
@@ -400,33 +399,7 @@ export function CaptainTaskDetail() {
                   </h2>
                 </div>
 
-                <div className="mt-2">
-                  {isTracking ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[13px] font-bold text-primary-100">
-                      <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-accent-400" />
-                      Sharing location
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[13px] font-bold text-primary-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-surface-400" />
-                      Location off
-                    </span>
-                  )}
-                </div>
-
-                {!isTracking && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      cleanupRef.current = startTracking(task.id);
-                      addToast("info", "Location sharing is on.");
-                    }}
-                    className="mt-3 flex w-full items-start gap-2 rounded-xl border border-warning-300/40 bg-warning-400/15 px-3 py-2.5 text-left text-[13px] leading-relaxed text-warning-100 transition-colors hover:bg-warning-400/20"
-                  >
-                    <CompassIcon size={13} className="mt-0.5 flex-shrink-0" />
-                    Turn on live location so the requester can follow you
-                  </button>
-                )}
+                <p className="mt-2 text-sm leading-relaxed text-primary-200">Location sharing continues as you move between pages. Check its status at the top of the screen.</p>
 
                 <div className="mt-4 space-y-2">
                   <a
@@ -503,6 +476,7 @@ export function CaptainTaskDetail() {
                 </Button>
               </>
             )}
+            {task.status === "CANCELLED" && <><h2 className="mt-2 text-xl font-bold">This visit was cancelled.</h2><p className="mt-2 text-sm text-primary-200">The requester’s reason is saved above.</p><Button to="/captain/dashboard" variant="inverse" className="mt-4">Find another visit</Button></>}
           </section>
 
           <section className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm">
@@ -558,7 +532,8 @@ export function CaptainTaskDetail() {
                 </p>
               </div>
             </div>
-          </section>
+        </section>
+          <VisitHistory task={task} />
         </aside>
       </div>
 
@@ -575,7 +550,7 @@ export function CaptainTaskDetail() {
                     ? "On the visit"
                     : task.status === "SUBMITTED"
                       ? "Proof sent"
-                      : "Visit complete"}
+                       : task.status === "CANCELLED" ? "Visit cancelled" : "Visit complete"}
             </p>
             <p className="truncate text-[14px] font-bold text-surface-900">
               {task.status === "OPEN"
@@ -586,7 +561,7 @@ export function CaptainTaskDetail() {
                     ? "Reach the pin and take the photo."
                     : task.status === "SUBMITTED"
                       ? "Waiting on the requester."
-                      : "Nice work. Find the next one."}
+                       : task.status === "CANCELLED" ? "This request has been closed." : "Nice work. Find the next one."}
             </p>
           </div>
           {task.status === "OPEN" ? (
@@ -643,7 +618,7 @@ export function CaptainTaskDetail() {
         <div className="space-y-4">
           <p className="text-sm text-surface-700">{task.evidenceSource === "CAMERA" ? "Taken with the in-browser camera. Capture time and GPS are device-reported." : task.evidenceSource === "UPLOAD" ? "Uploaded image. Original capture time and location are not verified." : "Capture method was not recorded for this visit."}</p>
           <div className="overflow-hidden rounded-2xl bg-surface-950 p-2">
-            <EvidenceImage taskId={task.id}
+            <EvidenceImage taskId={task.id} version={task.evidenceSubmittedAt}
               alt="Proof submitted for this visit"
               className="mx-auto max-h-[62dvh] w-full rounded-xl object-contain"
             />
@@ -662,7 +637,7 @@ export function CaptainTaskDetail() {
               </div>
             ))}
           </div>
-          <EvidenceDownload taskId={task.id} />
+          <EvidenceDownload taskId={task.id} version={task.evidenceSubmittedAt} />
         </div>
       </Modal>
 

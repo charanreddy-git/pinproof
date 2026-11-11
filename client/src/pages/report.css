@@ -1,0 +1,12 @@
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body:has(.report-page) { background: white; }
+  body:has(.report-page) .no-print,
+  body:has(.report-page) .fixed { display: none !important; }
+  .report-page { padding: 0 !important; background: white !important; }
+  .visit-report { max-width: none !important; padding: 0 !important; box-shadow: none !important; }
+  .report-photo { break-inside: avoid; }
+  .report-photo img { max-height: 200mm; }
+  .visit-report h2, .visit-report h3 { break-after: avoid; }
+  .visit-report { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

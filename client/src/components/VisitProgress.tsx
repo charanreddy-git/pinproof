@@ -22,6 +22,8 @@ export function VisitProgress({
   const isDone = status === "COMPLETED";
   const dark = tone === "dark";
 
+  if (status === "CANCELLED") return <p className={`text-sm font-semibold ${className}`}>Visit cancelled</p>;
+
   return (
     <div className={className}>
       <div

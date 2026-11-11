@@ -92,6 +92,7 @@ export function TaskTable({
                 <span className="relative flex h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border border-surface-200 bg-surface-100">
                   <EvidenceImage
                     taskId={task.id}
+                    version={task.evidenceSubmittedAt}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover"

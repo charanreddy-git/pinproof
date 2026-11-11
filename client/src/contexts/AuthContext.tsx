@@ -24,6 +24,8 @@ import {
   requestOtpApi,
   resetDemoApi,
   verifyOtpApi,
+  fetchProfileApi,
+  updateProfileApi,
 } from "../services";
 
 interface VerifyOtpOptions {
@@ -49,6 +51,7 @@ interface AuthContextType {
   demoLogin: (role: Role) => Promise<AuthResponse>;
   resetDemo: () => Promise<DemoResetResponse>;
   logout: () => void;
+  updateProfile: (input: { name: string; email: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -70,7 +73,8 @@ function readSavedSession(): AuthSession {
   try {
     const parsedUser = JSON.parse(savedUser) as User;
     // Sessions created before phone-first auth are discarded.
-    if (!parsedUser.phone) {
+    const payload = JSON.parse(atob(savedToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!parsedUser.id || !parsedUser.phone || !["USER", "CAPTAIN"].includes(parsedUser.role) || !payload.exp || payload.exp * 1000 <= Date.now()) {
       throw new Error("Legacy session");
     }
     return { user: parsedUser, token: savedToken };
@@ -89,6 +93,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [phoneSignInEnabled, setPhoneSignInEnabled] = useState(true);
   const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
   const { user, token } = session;
+
+  useEffect(() => {
+    const syncSession = (event: StorageEvent) => {
+      if (event.key !== "token" && event.key !== "user" && event.key !== null) return;
+      queryClient.clear();
+      setSession(readSavedSession());
+    };
+    window.addEventListener("storage", syncSession);
+    return () => window.removeEventListener("storage", syncSession);
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    void fetchProfileApi().then((profile) => {
+      if (!active || localStorage.getItem("token") !== token) return;
+      setSession({ token, user: profile });
+      localStorage.setItem("user", JSON.stringify(profile));
+    }).catch(() => { /* API handles expired sessions; connection failures keep the saved session. */ });
+    return () => { active = false; };
+  }, [token]);
 
   // The server is the source of truth for explicitly enabled demo deployments.
   useEffect(() => {
@@ -156,6 +181,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("user");
   }, [queryClient]);
 
+  const updateProfile = useCallback(async (input: { name: string; email: string }) => {
+    const profile = await updateProfileApi(input);
+    if (localStorage.getItem("token") !== token) return;
+    localStorage.setItem("user", JSON.stringify(profile));
+    setSession({ user: profile, token });
+    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+  }, [token, queryClient]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -172,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         demoLogin,
         resetDemo,
         logout,
+        updateProfile,
       }}
     >
       {children}

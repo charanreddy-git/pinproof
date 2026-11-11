@@ -14,6 +14,7 @@ import {
   MapPinIcon,
 } from "../../components";
 import { useTaskDetail, useSubmitTask } from "../../hooks";
+import { useLiveLocation } from "../../contexts";
 
 // Haversine distance (metres) between two coordinates.
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -43,20 +44,24 @@ export function UploadEvidencePage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
 
   // Photo
   const [captureSource, setCaptureSource] = useState<"CAMERA" | "UPLOAD">("UPLOAD");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [supportingPhotos, setSupportingPhotos] = useState<File[]>([]);
+  const [notes, setNotes] = useState("");
 
   // Location
-  const [currentLocation, setCurrentLocation] = useState<{
-    latitude: number;
-    longitude: number;
-    accuracy: number | null;
-  } | null>(null);
-  const [locationAttempt, setLocationAttempt] = useState(0);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const { fix: liveFix, error: locationError, retry: retryLocation } = useLiveLocation();
+  const currentLocation = liveFix
+    ? {
+        latitude: liveFix.latitude,
+        longitude: liveFix.longitude,
+        accuracy: liveFix.accuracy,
+      }
+    : null;
   const [lockedLocation, setLockedLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -66,66 +71,14 @@ export function UploadEvidencePage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Live GPS watch.
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setTimeout(() => setLocationError("This browser cannot access your location."), 0);
-      return;
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        setCurrentLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
-        setLocationError(null);
-      },
-      (err) => {
-        setLocationError(
-          err.code === 1
-            ? "Location access is blocked. Allow location for this site in your browser settings."
-            : "Could not get your location. Move to an open area and try again."
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [locationAttempt]);
-
   // Camera manager.
-  const startCamera = useCallback(
-    async (facing: "user" | "environment" = "environment") => {
-      setCameraError(null);
-      try {
-        if (activeStreamRef.current) {
-          activeStreamRef.current.getTracks().forEach((track) => track.stop());
-          activeStreamRef.current = null;
-        }
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
-        activeStreamRef.current = mediaStream;
-        setIsCameraActive(true);
-        if (videoRef.current) videoRef.current.srcObject = mediaStream;
-      } catch (err) {
-        const errorName = err instanceof Error ? err.name : "";
-        let message = "Could not open the camera.";
-        if (errorName === "NotAllowedError") {
-          message = "Camera access is blocked. Allow camera access for this site, or upload a photo instead.";
-        } else if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
-          message = "No camera found on this device. You can upload a photo instead.";
-        }
-        setCameraError(message);
-        setIsCameraActive(false);
-        if (!preview) setUseFallback(true);
-      }
-    },
-    [preview]
-  );
+  const startCamera = useCallback((facing: "user" | "environment" = "environment") => {
+    setCameraFacingMode(facing);
+    setCameraError(null);
+    setIsCameraActive(false);
+    setUseFallback(false);
+    setCameraAttempt((value) => value + 1);
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (activeStreamRef.current) {
@@ -136,17 +89,31 @@ export function UploadEvidencePage() {
   }, []);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    if (!useFallback && !preview && task) {
-      timer = setTimeout(() => {
-        startCamera(cameraFacingMode);
-      }, 0);
+    if (useFallback || preview || task?.status !== "IN_PROGRESS") return;
+    let cancelled = false;
+    async function openCamera() {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("This browser cannot open the camera. Use HTTPS or upload a photo.");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; }
+        activeStreamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setIsCameraActive(true);
+        setCameraError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setCameraError(error instanceof Error && error.name === "NotAllowedError" ? "Camera access is blocked. Allow it in your browser settings or upload a photo." : "Could not open the camera. You can upload a JPG or PNG instead.");
+        setIsCameraActive(false);
+        setUseFallback(true);
+      }
     }
+    void openCamera();
     return () => {
-      if (timer) clearTimeout(timer);
-      stopCamera();
+      cancelled = true;
+      activeStreamRef.current?.getTracks().forEach((track) => track.stop());
+      activeStreamRef.current = null;
     };
-  }, [useFallback, preview, cameraFacingMode, task, startCamera, stopCamera]);
+  }, [useFallback, preview, cameraFacingMode, task?.status, cameraAttempt]);
 
   if (isLoading) return <PageLoader />;
 
@@ -195,26 +162,26 @@ export function UploadEvidencePage() {
       )
     : null;
 
-  const proofLocation = lockedLocation || currentLocation;
+  const proofLocation = currentLocation;
   const proofDistance = proofLocation
     ? calculateDistance(task.targetLat, task.targetLng, proofLocation.latitude, proofLocation.longitude)
     : null;
 
   const hasAccurateLocation = (proofLocation?.accuracy ?? Infinity) <= 100;
-  const isInRange = proofDistance !== null && proofDistance <= 100 && hasAccurateLocation;
-  const locationHint = !proofLocation ? "Allow location access to continue." : !hasAccurateLocation ? "GPS accuracy must be within 100 m. Retake or reselect the photo after GPS improves." : "Move within 100 m of the property to submit.";
+  const isInRange = !locationError && proofDistance !== null && proofDistance <= 100 && hasAccurateLocation;
+  const locationHint = locationError || (!proofLocation ? "Allow location access to continue." : !hasAccurateLocation ? "GPS accuracy must be within 100 m. Move to an open area and retry location." : "Move within 100 m of the property to submit.");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
 
-    if (!selected.type.startsWith("image/")) {
+    if (!["image/jpeg", "image/png"].includes(selected.type)) {
       addToast("error", "Choose a JPG or PNG photo.");
       e.target.value = "";
       return;
     }
-    if (selected.size > 4 * 1024 * 1024) {
-      addToast("error", "That photo is over 4 MB. Choose a smaller file.");
+    if (selected.size + supportingPhotos.reduce((sum, photo) => sum + photo.size, 0) > 4 * 1024 * 1024) {
+      addToast("error", "Keep all photos together under 4 MB. Choose a smaller file.");
       e.target.value = "";
       return;
     }
@@ -232,16 +199,19 @@ export function UploadEvidencePage() {
         capturedAt: new Date().toISOString(),
       });
     }
+    e.target.value = "";
   };
 
   const toggleCameraFacing = () => {
     const next = cameraFacingMode === "user" ? "environment" : "user";
-    setCameraFacingMode(next);
     startCamera(next);
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !videoRef.current.videoWidth || !videoRef.current.videoHeight) {
+      addToast("info", "The camera is still loading. Try again in a moment.");
+      return;
+    }
     if (!currentLocation) {
       addToast("warning", "Waiting for GPS. Move to an open area.");
       return;
@@ -292,34 +262,36 @@ export function UploadEvidencePage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const finalLocation =
-      lockedLocation ||
-      (currentLocation
-        ? {
-            latitude: currentLocation.latitude,
-            longitude: currentLocation.longitude,
-            accuracy: currentLocation.accuracy,
-            capturedAt: new Date().toISOString(),
-          }
-        : null);
+    if (isSubmitting) return;
 
     if (!file) {
       addToast("error", "Take or upload a photo first.");
       return;
     }
-    if (!finalLocation) {
-      addToast("error", "GPS location is required to submit proof.");
+    if (file.size + supportingPhotos.reduce((sum, photo) => sum + photo.size, 0) > 4 * 1024 * 1024) {
+      addToast("error", "Keep all photos together under 4 MB. Remove a photo or use smaller files.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // The inspector shell keeps one live GPS watch running; the most recent
+      // fix is the submission location.
+      const finalLocation = currentLocation;
+      if (!finalLocation) {
+        throw new Error("Waiting for your GPS location. Move to an open area and retry.");
+      }
+      if ((finalLocation.accuracy ?? Infinity) > 100 || calculateDistance(task.targetLat, task.targetLng, finalLocation.latitude, finalLocation.longitude) > 100) {
+        throw new Error("Your current GPS must be within 100 m of the pin, with accuracy of 100 m or better.");
+      }
       const formData = new FormData();
       formData.append("image", file);
       formData.append("latitude", finalLocation.latitude.toString());
       formData.append("longitude", finalLocation.longitude.toString());
       formData.append("evidenceSource", captureSource);
-      if (captureSource === "CAMERA") formData.append("capturedAt", finalLocation.capturedAt);
+      if (captureSource === "CAMERA" && lockedLocation) formData.append("capturedAt", lockedLocation.capturedAt);
+      formData.append("inspectorNotes", notes);
+      supportingPhotos.forEach((photo) => formData.append("photos", photo));
       if (finalLocation.accuracy !== null) {
         formData.append("accuracy", finalLocation.accuracy.toString());
       }
@@ -329,7 +301,7 @@ export function UploadEvidencePage() {
     } catch (err) {
       const errorMsg =
         (err as { response?: { data?: { message?: string } } }).response?.data?.message ||
-        "Could not submit the proof. Please try again.";
+        (err instanceof Error ? err.message : "Could not submit the proof. Check your connection and retry.");
       addToast("error", errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -361,6 +333,11 @@ export function UploadEvidencePage() {
       </div>
 
       <div className="mt-4 space-y-4">
+        <section className="rounded-2xl border border-surface-200 bg-white p-4">
+          <h2 className="font-bold text-surface-900">What to check</h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-surface-600">{task.description}</p>
+          {task.revisionNote && <div className="mt-3 rounded-xl bg-warning-50 p-3 text-sm text-warning-800"><strong>Revised proof requested</strong><p className="mt-1 whitespace-pre-wrap">{task.revisionNote}</p></div>}
+        </section>
         {/* GPS status */}
         <section className="rounded-3xl border border-surface-200 bg-white p-4 shadow-card">
           <div className="flex items-center justify-between gap-3">
@@ -384,7 +361,7 @@ export function UploadEvidencePage() {
           {locationError ? (
             <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-danger-200 bg-danger-50 p-3">
               <AlertTriangleIcon size={15} className="mt-0.5 flex-shrink-0 text-danger-600" />
-              <div><p className="text-[14px] font-medium leading-relaxed text-danger-700">{locationError}</p><Button variant="secondary" size="sm" className="mt-2" onClick={() => { setLocationError(null); setCurrentLocation(null); setLocationAttempt((attempt) => attempt + 1); }}>Retry location</Button></div>
+              <div><p className="text-[14px] font-medium leading-relaxed text-danger-700">{locationError}</p><Button variant="secondary" size="sm" className="mt-2" onClick={() => retryLocation()}>Retry location</Button></div>
             </div>
           ) : !currentLocation ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-50 p-3">
@@ -484,6 +461,7 @@ export function UploadEvidencePage() {
           </div>
 
           <p className="mt-3 text-sm text-surface-600">{useFallback ? "Uploaded images are labelled as uploads. Their original capture time and location are not verified." : "Camera photos save device-reported capture time and GPS. Submit within 15 minutes of capture."}</p>
+          {cameraError && useFallback && <p role="status" className="mt-2 text-sm text-warning-800">{cameraError}</p>}
           {(lockedLocation?.accuracy ?? currentLocation?.accuracy ?? 0) > 100 && <p role="alert" className="mt-3 text-sm text-warning-800">GPS accuracy is too low. Move to an open area and refresh your location before capturing again.</p>}
           <form id="evidence-form" onSubmit={handleSubmit} className="mt-3 space-y-4">
             {!useFallback ? (
@@ -629,6 +607,22 @@ export function UploadEvidencePage() {
                 </label>
               </div>
             )}
+
+            <div className="space-y-3 border-t border-surface-200 pt-4">
+              <label className="block text-sm font-semibold text-surface-800" htmlFor="supporting-photos">Supporting photos (optional)</label>
+              <p id="supporting-help" className="text-sm text-surface-600">Add up to 5 JPG or PNG photos. All photos together must be under 4 MB. Supporting photos are labelled as uploads.</p>
+              <input id="supporting-photos" aria-describedby="supporting-help" type="file" accept="image/jpeg,image/png" multiple disabled={isSubmitting} className="w-full text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border file:border-surface-300 file:bg-white file:px-3 file:font-semibold" onChange={(event) => {
+                const selected = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (supportingPhotos.length + selected.length > 5) { addToast("error", "Add up to 5 supporting photos."); return; }
+                if (selected.some((photo) => !["image/jpeg", "image/png"].includes(photo.type))) { addToast("error", "Choose JPG or PNG photos."); return; }
+                if ([...supportingPhotos, ...selected].reduce((sum, photo) => sum + photo.size, file?.size ?? 0) > 4 * 1024 * 1024) { addToast("error", "Keep all photos together under 4 MB."); return; }
+                setSupportingPhotos((previous) => [...previous, ...selected]);
+              }} />
+              {supportingPhotos.length > 0 && <ul className="divide-y divide-surface-200">{supportingPhotos.map((photo, index) => <li key={`${photo.name}-${index}`} className="flex items-center gap-3 py-2"><span className="min-w-0 flex-1 truncate text-sm text-surface-700">{photo.name}</span><button type="button" disabled={isSubmitting} aria-label={`Remove ${photo.name}`} onClick={() => setSupportingPhotos((previous) => previous.filter((_, i) => i !== index))} className="min-h-11 px-2 text-sm font-semibold text-danger-700">Remove</button></li>)}</ul>}
+              <label htmlFor="inspector-notes" className="block text-sm font-semibold text-surface-800">Inspector’s findings</label>
+              <textarea id="inspector-notes" value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={5000} rows={5} placeholder="Describe the condition, what you checked, and anything the requester should know." className="w-full rounded-xl border border-surface-300 p-3 text-base" />
+            </div>
 
             <div className="rounded-2xl bg-surface-50 p-3.5">
               <div className="flex items-start gap-2.5">

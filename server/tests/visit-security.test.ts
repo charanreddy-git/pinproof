@@ -21,6 +21,12 @@ test("private evidence, authorized location, server-priced visits and capture pr
   const originalCreate = prisma.task.create;
   const originalUpdate = prisma.task.updateMany;
   const originalFindOrThrow = prisma.task.findUniqueOrThrow;
+  const originalTransaction = prisma.$transaction;
+  const originalPhotoDelete = prisma.proofPhoto.deleteMany;
+  const originalEventCreate = prisma.taskEvent.create;
+  (prisma as any).$transaction = async (callback: any) => callback(prisma);
+  (prisma.proofPhoto as any).deleteMany = async () => ({ count: 0 });
+  (prisma.taskEvent as any).create = async ({ data }: any) => data;
   (prisma.task as any).findUnique = async () => fixture;
   (prisma.task as any).create = async ({ data }: any) => data;
   (prisma.task as any).updateMany = async ({ data }: any) => { stored = data; return { count: 1 }; };
@@ -73,6 +79,9 @@ test("private evidence, authorized location, server-priced visits and capture pr
       await assert.rejects(TaskService.submitTask("visit-test", "inspector", submitTaskSchema.parse({ latitude: 12, longitude: 77, accuracy: 1000 }), "/uploads/audit-test.png"), /GPS accuracy/);
     });
   } finally {
+    prisma.$transaction = originalTransaction;
+    prisma.proofPhoto.deleteMany = originalPhotoDelete;
+    prisma.taskEvent.create = originalEventCreate;
     prisma.evidence.findUnique = originalEvidenceFind;
     prisma.task.findUnique = originalFind; prisma.task.create = originalCreate; prisma.task.updateMany = originalUpdate; prisma.task.findUniqueOrThrow = originalFindOrThrow;
     await unlink(path.join(directory, "audit-test.png"));

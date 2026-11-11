@@ -4,9 +4,24 @@ import {
   demoLoginSchema,
   requestOtpSchema,
   verifyOtpSchema,
+  profileSchema,
 } from "../validators";
 
 export class AuthController {
+  static async getProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ success: true, data: await AuthService.getProfile(req.user!.userId) });
+    } catch (error) { next(error); }
+  }
+
+  static async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ success: true, data: await AuthService.updateProfile(req.user!.userId, profileSchema.parse(req.body)) });
+    } catch (error) { next(error); }
+  }
+
   static async getMode(_req: Request, res: Response, next: NextFunction) {
     try {
       const result = await DemoService.getMode();

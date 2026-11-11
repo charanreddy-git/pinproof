@@ -26,6 +26,7 @@ const ACTIVE_ORDER: Record<TaskStatus, number> = {
   SUBMITTED: 2,
   OPEN: 3,
   COMPLETED: 4,
+  CANCELLED: 5,
 };
 
 const ACTIVE_FILTERS: { id: StatusFilter; label: string }[] = [
@@ -48,7 +49,7 @@ export function AcceptedTasksPage() {
     )
     .sort((a, b) => ACTIVE_ORDER[a.status] - ACTIVE_ORDER[b.status]);
   const pastTasks = allTasks
-    .filter((task) => task.status === "COMPLETED")
+    .filter((task) => task.status === "COMPLETED" || task.status === "CANCELLED")
     .sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()

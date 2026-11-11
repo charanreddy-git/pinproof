@@ -19,6 +19,39 @@ visits, and mobile-first flows that work on a phone.
 4. The inspector can submit proof only when their GPS is within **100 metres** of the pin.
 5. The requester reviews the photos and marks the visit complete.
 
+Requesters can edit an open request, cancel before travel starts, request revised
+proof, and print or save a complete visit report as PDF. Inspectors can release an
+accepted visit before starting it, submit a primary photo plus five supporting
+photos, and record their findings. Both participants have a timestamped visit
+history and contact details after assignment.
+
+### Run from the repository root
+
+```bash
+npm run install:all
+# Configure server/.env using .env.example and create your PostgreSQL database.
+npm run db:migrate
+npm run dev
+```
+
+Open **http://localhost:5173**. Set `AUTH_MODE=demo` for one-click requester and
+inspector accounts, or use `SMS_PROVIDER=console` for local phone OTP signup.
+An optional, git-ignored `server/.env.development.local` overrides `server/.env`
+for the development server, seed, and root migration command. Explicit process
+environment variables take priority; production ignores the local override.
+
+```bash
+npm run check          # Server/client regression tests, lint, production builds
+npm run test:e2e       # Real PostgreSQL API lifecycle and concurrency checks
+npm run test:browser   # Two browser accounts: book, inspect, revise, print, approve
+```
+
+The end-to-end checks create and remove a unique schema in local PostgreSQL's
+`postgres` database, using your OS login role. Set `TEST_DATABASE_URL` for another
+test database. They do not use the application's configured database. Browser
+tests require Chromium: `cd client && npx playwright install chromium`.
+See [the end-to-end guide](docs/END_TO_END.md) for the complete workflow.
+
 ### Roles
 
 | Role | What they can do |
@@ -38,6 +71,7 @@ visits, and mobile-first flows that work on a phone.
 | `IN_PROGRESS` | On the way — live location available |
 | `SUBMITTED` | Proof ready to review |
 | `COMPLETED` | Completed |
+| `CANCELLED` | Cancelled — retained in past visits |
 
 ---
 
@@ -51,7 +85,10 @@ visits, and mobile-first flows that work on a phone.
 - Mobile-first request flow with quick-add inspection checklists
 - Live inspector tracking over authenticated HTTP polling
 - Server-enforced 100 m proximity check using the Haversine formula
-- Photo evidence (JPG/PNG, 5 MB max), stored locally and served from `/uploads`
+- Private JPG/PNG evidence persisted in PostgreSQL; six photos per submission, 4 MB total
+- Inspector findings, revision requests, edit/cancel/release actions, and visit history
+- Print-ready multi-photo reports with Save as PDF and private photo downloads
+- Editable account name/email and validated saved sessions
 - GPS coordinates, accuracy, capture time, and submission time stored with each proof
 - Role-protected dashboards and task-level access control
 - Nearby visit discovery: inspectors see open requests within 7 km of their current location
@@ -65,18 +102,16 @@ visits, and mobile-first flows that work on a phone.
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query |
-| Typography | Mukta + Karma, self-hosted through Fontsource |
+| Typography | Poppins, self-hosted through Fontsource |
 | Maps | Leaflet + React Leaflet, OpenStreetMap tiles |
 | Backend | Node.js, Express 5, TypeScript |
 | Database | PostgreSQL with Prisma ORM |
 | Live updates | HTTP polling over REST |
 | Auth | Mobile OTP + JWT (Bearer token); Fast2SMS, Twilio, or webhook delivery |
-| Uploads | Multer, local `server/uploads` directory |
+| Uploads | Multer, private PostgreSQL `Evidence` / `ProofPhoto` tables |
 
-Mukta (Ek Type, Mumbai) carries body copy and UI labels; Karma (Indian Type
-Foundry) carries display headings. Both are multi-script families with
-Devanagari and Latin support, chosen for open counters and comfortable reading on
-budget Android screens. Fonts are bundled, not fetched from Google Fonts.
+Poppins carries headings and interface text. Fonts are bundled rather than fetched
+from Google Fonts.
 
 ### Architecture
 
@@ -89,7 +124,7 @@ Express API (:3001)
    ▼
 PostgreSQL
    │
-   └── evidence files → server/uploads → served at /uploads
+   └── private evidence bytes → authenticated participant-only API
 ```
 
 The client talks to same-origin `/api` and `/uploads` paths in development;
@@ -131,7 +166,7 @@ pinproof/
 
 ### Prerequisites
 
-- Node.js 20.19+ (or 22.12+)
+- Node.js 22.12+
 - PostgreSQL 14+ (local, Neon, Supabase, or any hosted Postgres)
 
 ### 1. Install dependencies
@@ -177,6 +212,8 @@ npx prisma migrate deploy
 ```
 
 `migrate deploy` applies the checked-in migrations in `server/prisma/migrations`.
+When using `server/.env.development.local`, use `npm run db:migrate` at the root
+so the same local database configuration is used by both migration and app.
 Use `npx prisma migrate dev --name <change>` while developing a schema change; it
 creates a new migration and applies it locally.
 
@@ -263,13 +300,12 @@ and restores four prepared Bengaluru visits:
 | `SUBMITTED` | 2BHK rental check — Indiranagar | Reviewing proof and completing a visit |
 | `COMPLETED` | Shop shutter check — Jayanagar | Browsing past visits and completed proof |
 
-The submitted visit includes an illustrative sample proof image at
-`/uploads/demo-proof.svg`, so the full review flow works offline from the camera.
+The submitted visit includes an illustrative sample image stored in PostgreSQL,
+served through the participant-only evidence route.
 
-**Safety:** demo mode is always disabled when `NODE_ENV=production`. The server
-reports `"mode": "otp"` and returns `403` from the demo endpoints in production,
-regardless of `AUTH_MODE`. Demo mode never bypasses task, evidence, or location
-authorization rules.
+Production demo mode requires both `AUTH_MODE=demo` and `PUBLIC_DEMO=true`.
+That explicit public-demo configuration disables phone OTP and exposes only the
+two prepared accounts. Demo mode keeps the normal visit, evidence, and GPS rules.
 
 ### Build for production
 
@@ -295,7 +331,8 @@ see [DEPLOYMENT.md](DEPLOYMENT.md).
 | `DATABASE_URL` | `server/.env` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | `server/.env` | Yes | Signing secret, 32+ characters |
 | `JWT_EXPIRES_IN` | `server/.env` | No | Token lifetime (default `7d`) |
-| `AUTH_MODE` | `server/.env` | No | `otp` (default) or `demo`; demo is rejected when `NODE_ENV=production` |
+| `AUTH_MODE` | `server/.env` | No | `otp` (default) or `demo`; production demo also requires `PUBLIC_DEMO=true` |
+| `PUBLIC_DEMO` | `server/.env` | No | Explicit shared demo deployment; disables phone OTP |
 | `SMS_PROVIDER` | `server/.env` | No | `console` (development), `fast2sms`, `twilio`, or `webhook` |
 | `OTP_SECRET` | `server/.env` | No | OTP HMAC secret; defaults to `JWT_SECRET` |
 | `OTP_TTL_SECONDS` | `server/.env` | No | Code lifetime (default `300`) |
@@ -377,8 +414,10 @@ it never reveals whether a phone number already has an account.
 | `POST` | `/api/auth/otp/verify` | Public | Verify the code and receive a JWT |
 | `POST` | `/api/auth/demo` | Demo only | One-tap login as `USER` or `CAPTAIN` |
 | `POST` | `/api/auth/demo/reset` | Demo only | Delete demo visits and restore the four prepared ones |
+| `GET` | `/api/auth/me` | Signed in | Get the current account |
+| `PATCH` | `/api/auth/me` | Signed in | Update name and optional email |
 
-Demo endpoints return `403` in production and are rate-limited in development.
+Demo endpoints require explicit demo configuration and are rate-limited.
 
 **Request a code**
 
@@ -451,6 +490,12 @@ The `webhook` SMS provider receives:
 | `POST` | `/api/tasks/:id/start` | Inspector | Mark the visit as on the way |
 | `POST` | `/api/tasks/:id/submit` | Inspector | Submit photo + GPS (`multipart/form-data`: `image`, `latitude`, `longitude`, optional `accuracy`, optional `capturedAt`) |
 | `POST` | `/api/tasks/:id/complete` | User | Approve a submitted visit |
+| `PATCH` | `/api/tasks/:id` | Owner | Edit title, instructions, and pin while open |
+| `POST` | `/api/tasks/:id/cancel` | Owner | Cancel an open/accepted visit; JSON `{ "reason": "..." }` |
+| `POST` | `/api/tasks/:id/release` | Assigned inspector | Release before starting; JSON `{ "reason": "..." }` |
+| `POST` | `/api/tasks/:id/revision` | Owner | Return submitted proof for revision; JSON `{ "reason": "..." }` |
+| `GET` | `/api/tasks/:id/evidence` | Participants | Download the primary photo |
+| `GET` | `/api/tasks/:id/photos/:photoId` | Participants | Download a supporting photo |
 | `GET` | `/api/health` | Public | API + database health check |
 
 **Create visit body**
@@ -475,20 +520,20 @@ and poll the resources they are viewing:
 | `GET /api/tasks/:id/location` | 5 seconds while tracking | Latest inspector GPS point |
 | `GET /api/tasks` | 15 seconds | Dashboard and visit lists |
 
-Every request uses `Authorization: Bearer <token>` and the same task-level access
-rules as the rest of the API. The location endpoint accepts JSON
-`{ "latitude": 12.97, "longitude": 77.64 }`. Location writes are throttled to one
-database log per inspector per visit every 60 seconds, while the latest point is
-served immediately from memory between writes.
+Every request uses `Authorization: Bearer <token>` and task-level access rules.
+The location endpoint accepts JSON `{ "latitude": 12.97, "longitude": 77.64 }`.
+The browser sends at most one update every five seconds; each accepted point is
+persisted before acknowledgment so all API instances see it. Sharing continues
+between dashboard pages, can be paused, and ends when proof is submitted.
 
 ---
 
 ## The 100 m rule
 
-The inspector's browser captures a GPS fix at the moment of upload. The server
-recomputes the distance between that fix and the visit's pinned coordinates using
-the Haversine formula. If the result is more than `100` metres, the submission is
-rejected.
+The inspector's app watches GPS continuously while a visit is in progress and sends
+the latest live fix with the upload. The server recomputes the distance between
+that fix and the visit's pinned coordinates using the Haversine formula. If the
+result is more than `100` metres, the submission is rejected.
 
 This limits accidental or fabricated submissions, but GPS accuracy varies in dense
 urban areas and indoors. The browser also sends its reported GPS accuracy and the
@@ -500,10 +545,10 @@ truth — client-side checks are only there for early feedback.
 
 ## Operational notes
 
-- **Uploads are local.** Back up `server/uploads` and serve it from persistent
-  storage. On ephemeral hosts (Render, Railway, containers), use S3/Cloudinary or a
-  mounted volume instead. `/uploads` is currently public; switch to private objects
-  with short-lived signed URLs before handling sensitive property photos.
+- **Uploads are private and persistent.** Photo bytes live in PostgreSQL and are
+  served only to the owner and assigned inspector with `Cache-Control: private,
+  no-store`. The old `/uploads` public route returns 404. Legacy on-disk files can
+  still be read through the authorized evidence endpoint.
 - **OTP delivery.** `SMS_PROVIDER=console` is development-only and is rejected in
   production. Fast2SMS is the recommended provider for India. Use `FAST2SMS_ROUTE=dlt`
   or `dlt_manual` with a DLT-registered sender and template for production traffic;
@@ -515,8 +560,9 @@ truth — client-side checks are only there for early feedback.
   when running more than one API instance.
 - **JWT storage.** The client keeps the token in `localStorage` for simplicity. For
   a higher-security deployment, move auth to httpOnly cookies with CSRF protection.
-- **Image validation** checks MIME type, extension, and a 5 MB limit. Add malware
-  scanning and image re-encoding before exposing uploads publicly.
+- **Image validation** checks MIME type, filename extension, file signature,
+  six-file maximum, and a 4 MB combined limit. Supporting images are labelled as
+  uploads rather than given an invented camera capture time.
 - **Maps** use OpenStreetMap tiles in the app; no Google Maps API key is required.
   Google Maps links are resolved server-side by following redirects and parsing
   coordinates.
@@ -526,15 +572,12 @@ truth — client-side checks are only there for early feedback.
 
 ## Current scope
 
-This repository implements the visit workflow end to end: phone OTP sign-in,
-requesting a property, live location sharing, server-side proximity checks, GPS
-evidence metadata, and completion. It does **not** process payments, payouts, KYC,
-or multi-photo reports. Prices and inspector payouts shown on the marketing pages
-are illustrative product copy; no money moves through the app.
-
-`AUTH_MODE=demo` is a local development convenience only. It is refused in
-production and does not change the OTP, task, evidence, or location authorization
-paths.
+This repository implements the visit workflow end to end: phone OTP signup,
+booking and corrections, nearby discovery, assignment, persistent live GPS,
+multi-photo evidence with findings, revisions, cancellation/release, printable PDF
+reports, account updates, and completion. Prices are server-assigned quotes;
+payment collection, inspector payouts, and KYC are not integrated. Real SMS
+delivery uses a configured provider; local development displays a test OTP.
 
 Map pins are inline SVG generated by the client; no third-party marker assets are
 bundled.
@@ -546,7 +589,6 @@ bundled.
 - In-app payments and receipts
 - Inspector ratings and visit reviews
 - Push/SMS notifications for status changes
-- Multi-photo visits and PDF reports
 - Regional language support
 - Inspector availability zones and smarter matching
 

@@ -22,6 +22,7 @@ const STATUS_COPY: Record<
   TaskStatus,
   { label: string; chip: string; icon: typeof ClockIcon }
 > = {
+  CANCELLED: { label: "Visit cancelled", chip: "bg-surface-100 text-surface-600", icon: ClockIcon },
   OPEN: {
     label: "Finding an inspector",
     chip: "bg-surface-100 text-surface-600",

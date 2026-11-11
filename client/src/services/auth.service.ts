@@ -7,7 +7,16 @@ import type {
   OtpRequestResponse,
   Role,
   VerifyOtpResponse,
+  User,
 } from "../types";
+
+export async function fetchProfileApi(): Promise<User> {
+  return (await api.get<ApiResponse<User>>("/auth/me")).data.data;
+}
+
+export async function updateProfileApi(input: { name: string; email: string }): Promise<User> {
+  return (await api.patch<ApiResponse<User>>("/auth/me", input)).data.data;
+}
 
 export async function fetchAuthModeApi(): Promise<AuthModeResponse> {
   const { data } = await api.get<ApiResponse<AuthModeResponse>>("/auth/mode");

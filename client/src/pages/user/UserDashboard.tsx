@@ -20,6 +20,7 @@ import { formatRelativeTime, greeting } from "../../utils/time";
 import type { Task, TaskStatus } from "../../types";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
+  CANCELLED: "Cancelled",
   OPEN: "Finding inspector",
   ACCEPTED: "Assigned",
   IN_PROGRESS: "On the way",

@@ -32,7 +32,7 @@ async function request<T>(
     );
   }
 
-  if (response.status === 401 && localStorage.getItem("token") === token) {
+  if (response.status === 401 && token && !url.startsWith("/auth/otp/") && localStorage.getItem("token") === token) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     if (
@@ -54,6 +54,9 @@ const api = {
   },
   post<T>(url: string, body?: unknown, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
     return request<T>("POST", url, body, config?.headers);
+  },
+  patch<T>(url: string, body: unknown): Promise<{ data: T }> {
+    return request<T>("PATCH", url, body);
   },
 };
 

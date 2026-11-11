@@ -88,7 +88,11 @@ export function TrackCaptainPage() {
   };
 
   const nextCopy =
-    task.status === "SUBMITTED"
+    task.status === "CANCELLED"
+      ? { title: "This visit was cancelled.", description: task.cancellationReason || "The request is closed. You can find it in past visits.", cta: "Visit details", to: `/user/tasks/${task.id}` }
+      : task.revisionNote
+      ? { title: "Waiting for revised proof.", description: task.revisionNote, cta: "Visit details", to: `/user/tasks/${task.id}` }
+      : task.status === "SUBMITTED"
       ? {
           title: "Proof is ready to review.",
           description:

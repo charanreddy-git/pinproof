@@ -24,6 +24,10 @@ import type { Task, TaskStatus } from "../../types";
 import { EvidenceImage, EvidenceDownload } from "../../components/EvidenceImage";
 import { STATUS_ORDER, TASK_STEPS, visitRef } from "../../utils/task";
 import { formatRelativeTime } from "../../utils/time";
+import { VisitManagement } from "../../components/VisitManagement";
+import { VisitHistory } from "../../components/VisitHistory";
+import { VisitReportSummary } from "../../components/VisitReportSummary";
+import { QueryNotice } from "../../components/QueryNotice";
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("en-IN", {
@@ -37,7 +41,7 @@ function formatDateTime(value: string): string {
 
 export function UserTaskDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: task, isLoading, isError } = useTaskDetail(id!);
+  const { data: task, isLoading, isError, refetch } = useTaskDetail(id!);
   const completeTask = useCompleteTask();
   const { addToast } = useToast();
   const queryClient = useQueryClient();
@@ -61,7 +65,7 @@ export function UserTaskDetail() {
 
   if (isLoading) return <PageLoader />;
 
-  if (isError || !task) {
+  if (!task) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
         <p className="text-[14px] font-bold text-primary-700">Visit unavailable</p>
@@ -74,6 +78,7 @@ export function UserTaskDetail() {
         <Button to="/user/tasks" className="mt-6">
           Back to my visits
         </Button>
+        <Button variant="secondary" className="mt-3" onClick={() => void refetch()}>Try again</Button>
       </div>
     );
   }
@@ -115,6 +120,7 @@ export function UserTaskDetail() {
 
   return (
     <div className="mx-auto max-w-6xl pb-24 sm:pb-0">
+      {isError && <QueryNotice retry={() => void refetch()} stale />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button to="/user/tasks" variant="ghost" size="sm" className="-ml-2 min-h-11">
           <span aria-hidden="true">←</span>
@@ -198,7 +204,7 @@ export function UserTaskDetail() {
                   className="group relative block w-full cursor-zoom-in bg-surface-950 p-2 text-left sm:p-3"
                   aria-label="Open the proof photo full screen"
                 >
-                  <EvidenceImage taskId={task.id}
+                  <EvidenceImage taskId={task.id} version={task.evidenceSubmittedAt}
                     alt="Property proof submitted by the inspector"
                     className="max-h-[30rem] w-full rounded-xl bg-surface-950 object-contain"
                   />
@@ -280,6 +286,8 @@ export function UserTaskDetail() {
             </section>
           )}
 
+          <VisitReportSummary task={task} />
+
           <section className="overflow-hidden rounded-3xl border border-surface-200 bg-white shadow-card">
             <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
               <div>
@@ -330,6 +338,7 @@ export function UserTaskDetail() {
 
         {/* Side column */}
         <aside className="space-y-5 lg:col-span-5">
+          <VisitManagement task={task} />
           <section className="rounded-3xl bg-primary-900 p-5 text-white shadow-card">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[13px] font-bold text-accent-300">Next step</p>
@@ -342,7 +351,7 @@ export function UserTaskDetail() {
             />
           </section>
 
-          <section className="rounded-3xl border border-surface-200 bg-white p-5 shadow-card">
+          {task.status !== "CANCELLED" && <section className="rounded-3xl border border-surface-200 bg-white p-5 shadow-card">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-[13px] font-bold text-primary-700">
@@ -405,7 +414,9 @@ export function UserTaskDetail() {
                 );
               })}
             </ol>
-          </section>
+          </section>}
+
+          <VisitHistory task={task} />
 
           <section className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm">
             <p className="text-[13px] font-bold text-primary-700">
@@ -480,7 +491,7 @@ export function UserTaskDetail() {
         <div className="space-y-4">
           <p className="text-sm text-surface-700">{task.evidenceSource === "CAMERA" ? "Taken with the in-browser camera. Capture time and GPS are device-reported." : task.evidenceSource === "UPLOAD" ? "Uploaded image. Original capture time and location are not verified." : "Capture method was not recorded for this visit."}</p>
           <div className="overflow-hidden rounded-2xl bg-surface-950 p-2">
-            <EvidenceImage taskId={task.id}
+            <EvidenceImage taskId={task.id} version={task.evidenceSubmittedAt}
               alt="Property proof submitted by the inspector"
               className="mx-auto max-h-[62dvh] w-full rounded-xl object-contain"
             />
@@ -499,7 +510,7 @@ export function UserTaskDetail() {
               </div>
             ))}
           </div>
-          <EvidenceDownload taskId={task.id} />
+          <EvidenceDownload taskId={task.id} version={task.evidenceSubmittedAt} />
         </div>
       </Modal>
 
@@ -550,7 +561,12 @@ export function UserTaskDetail() {
 }
 
 function mobileNextStep(task: Task, onShare: () => void) {
+  if (task.revisionNote) return { eyebrow: "Revision requested", label: "Waiting for updated proof.", action: <Button to={`/user/tasks/${task.id}#evidence`} variant="secondary" size="sm">Previous proof</Button> };
   switch (task.status) {
+    case "CANCELLED":
+      return { eyebrow: "Visit cancelled", label: "You can request a new visit.", action: <Button to="/user/create-task" size="sm">Book again</Button> };
+    case "ACCEPTED":
+      return { eyebrow: "Inspector assigned", label: "We’ll update you when the visit starts.", action: <Button onClick={onShare} variant="secondary" size="sm">Copy owner link</Button> };
     case "SUBMITTED":
       return {
         eyebrow: "Proof ready",
@@ -627,6 +643,10 @@ function ActionPanel({
   isCompleting: boolean;
 }) {
   const status: TaskStatus = task.status;
+
+  if (status === "CANCELLED") return <><h2 className="mt-2 text-xl font-bold">This visit is closed.</h2><p className="mt-2 text-sm text-primary-200">The cancellation and its reason are saved in your visit history.</p><Button to="/user/create-task" variant="inverse" className="mt-4">Book another visit</Button></>;
+
+  if (task.revisionNote) return <><h2 className="mt-2 text-xl font-bold">Waiting for revised proof.</h2><p className="mt-2 text-sm text-primary-200">Your inspector can read your feedback and submit a replacement report. We’ll update this page when it arrives.</p></>;
 
   if (status === "SUBMITTED") {
     return (

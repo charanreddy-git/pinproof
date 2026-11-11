@@ -19,6 +19,7 @@ enum TaskStatus {
   IN_PROGRESS
   SUBMITTED
   COMPLETED
+  CANCELLED
 }
 
 model User {
@@ -92,6 +93,10 @@ model Task {
   evidenceAccuracy    Float?
   evidenceCapturedAt  DateTime?
   evidenceSubmittedAt DateTime?
+  inspectorNotes      String?
+  revisionNote        String?
+  cancellationReason  String?
+  completedAt         DateTime?
 
   createdById  String
   acceptedById String?
@@ -101,12 +106,41 @@ model Task {
 
   locationLogs LocationLog[]
   evidence     Evidence?
+  photos       ProofPhoto[]
+  events       TaskEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([createdById])
   @@index([acceptedById])
+  @@index([status, targetLat, targetLng])
+}
+
+// Supporting photos are private, just like the primary proof image.
+model ProofPhoto {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  data        Bytes
+  contentType String
+  filename    String
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model TaskEvent {
+  id        String     @id @default(cuid())
+  taskId    String
+  task      Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  action    String
+  status    TaskStatus
+  actorId   String
+  note      String?
+  createdAt DateTime   @default(now())
+
+  @@index([taskId, createdAt])
 }
 
 // Kept separately so task-list queries never load photo bytes.

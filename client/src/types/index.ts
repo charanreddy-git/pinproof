@@ -33,7 +33,8 @@ export type TaskStatus =
   | "ACCEPTED"
   | "IN_PROGRESS"
   | "SUBMITTED"
-  | "COMPLETED";
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface User {
   id: string;
@@ -49,6 +50,12 @@ export type TaskUser = Pick<User, "id" | "name" | "role"> & {
 };
 
 export interface Task {
+  inspectorNotes?: string | null;
+  revisionNote?: string | null;
+  cancellationReason?: string | null;
+  completedAt?: string | null;
+  photos?: { id: string; filename: string; createdAt: string }[];
+  events?: { id: string; action: string; status: TaskStatus; actorId: string; note: string | null; createdAt: string }[];
   visitPlan?: "STANDARD" | "DETAILED" | null;
   quotedPricePaise?: number | null;
   propertyType?: string | null;
@@ -75,6 +82,8 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
 }
+
+export type UpdateTaskInput = Pick<CreateTaskInput, "title" | "description" | "latitude" | "longitude">;
 
 interface LocationLog {
   id: string;

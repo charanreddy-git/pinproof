@@ -40,7 +40,7 @@ export function UserVisitsPage() {
     allTasks.filter((task) => isActiveStatus(task.status))
   );
   const pastTasks = allTasks
-    .filter((task) => task.status === "COMPLETED")
+    .filter((task) => task.status === "COMPLETED" || task.status === "CANCELLED")
     .sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()

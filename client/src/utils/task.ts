@@ -21,6 +21,7 @@ export const STATUS_ORDER: Record<TaskStatus, number> = {
   IN_PROGRESS: 2,
   SUBMITTED: 3,
   COMPLETED: 4,
+  CANCELLED: -1,
 };
 
 export const ACTIVE_STATUSES: TaskStatus[] = [
@@ -42,6 +43,7 @@ const REQUESTER_PRIORITY: Record<TaskStatus, number> = {
   ACCEPTED: 2,
   OPEN: 3,
   COMPLETED: 4,
+  CANCELLED: 5,
 };
 
 export function sortForRequester<T extends { status: TaskStatus }>(tasks: T[]): T[] {

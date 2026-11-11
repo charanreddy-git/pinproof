@@ -20,16 +20,17 @@ import { api } from "../../services";
 
 const parseLocalCoordinates = (url: string) => {
   const patterns = [
-    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
-    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /[?&](q|ll|cbll)=(-?\d+\.\d+),(-?\d+\.\d+)/,
-    /\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /[?&](?:query|q|ll|cbll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /\/place\/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
   ];
 
+  try { url = decodeURIComponent(url); } catch { return null; }
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) {
-      const latIndex = pattern.source.includes("(q|ll|cbll)") ? 2 : 1;
+      const latIndex = 1;
       const latitude = parseFloat(match[latIndex]);
       const longitude = parseFloat(match[latIndex + 1]);
       if (Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180) {
@@ -211,6 +212,7 @@ export function CreateTaskPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (createTask.isPending) return;
 
     if (instructionLength < 10) {
       addToast("error", "Please write at least 10 characters so the inspector knows what to check.");
@@ -457,6 +459,7 @@ export function CreateTaskPage() {
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="For example: Check the boundary wall, photograph the main gate, and confirm the road is approachable by car."
+                maxLength={5000}
                 required
                 rows={6}
                 className="w-full resize-none rounded-2xl border-2 border-surface-200 bg-surface-50 px-4 py-3 text-base leading-relaxed text-surface-900 transition-colors placeholder:text-surface-400 hover:border-surface-300 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 sm:text-[14px]"

@@ -6,8 +6,8 @@ import {
   haversineDistance,
   MAX_DISTANCE_METERS,
 } from "../utils";
-import type { CreateTaskInput, SubmitTaskInput } from "../validators";
-import { TaskStatus } from "@prisma/client";
+import type { CreateTaskInput, SubmitTaskInput, UpdateTaskInput } from "../validators";
+import { Prisma, TaskStatus } from "@prisma/client";
 import { LocationService } from "./location.service";
 
 /** Safe shape for public/open task listings — no phone number. */
@@ -45,6 +45,7 @@ export class TaskService {
         targetLng: input.longitude,
         status: TaskStatus.OPEN,
         createdById: userId,
+        events: { create: { action: "CREATED", status: "OPEN", actorId: userId } },
       },
       include: taskWithUsers,
     });
@@ -152,7 +153,11 @@ export class TaskService {
   ) {
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: taskWithUsers,
+      include: {
+        ...taskWithUsers,
+        photos: { select: { id: true, filename: true, createdAt: true }, orderBy: { createdAt: "asc" } },
+        events: { orderBy: { createdAt: "asc" } },
+      },
     });
 
     if (!task) {
@@ -175,6 +180,7 @@ export class TaskService {
     if (role === "CAPTAIN" && task.status === "OPEN") {
       return {
         ...task,
+        events: [],
         createdBy: {
           id: task.createdBy.id,
           name: task.createdBy.name,
@@ -202,6 +208,17 @@ export class TaskService {
     const evidence = await prisma.evidence.findUnique({ where: { taskId } });
     if (evidence) return { data: evidence.data, contentType: evidence.contentType };
     return { path: await TaskService.getEvidencePath(taskId, userId) };
+  }
+
+  static async getPhoto(taskId: string, photoId: string, userId: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw ApiError.notFound("Visit not found");
+    if (task.createdById !== userId && task.acceptedById !== userId) {
+      throw ApiError.forbidden("You do not have access to this proof");
+    }
+    const photo = await prisma.proofPhoto.findFirst({ where: { id: photoId, taskId } });
+    if (!photo) throw ApiError.notFound("Photo not found");
+    return photo;
   }
 
   static async getEvidencePath(taskId: string, userId: string) {
@@ -234,7 +251,7 @@ export class TaskService {
       // Conditional update: two inspectors can read OPEN at the same time,
       // but only one can move the row out of OPEN.
       const claimed = await tx.task.updateMany({
-        where: { id: taskId, status: TaskStatus.OPEN },
+        where: { id: taskId, status: TaskStatus.OPEN, updatedAt: task.updatedAt },
         data: {
           status: TaskStatus.ACCEPTED,
           acceptedById: captainId,
@@ -244,6 +261,8 @@ export class TaskService {
       if (claimed.count === 0) {
         throw ApiError.badRequest("Task is no longer available");
       }
+
+      await tx.taskEvent.create({ data: { taskId, action: "ACCEPTED", status: "ACCEPTED", actorId: captainId } });
 
       return tx.task.findUniqueOrThrow({
         where: { id: taskId },
@@ -257,23 +276,7 @@ export class TaskService {
    * Wrapped in a transaction to guard against duplicate start requests.
    */
   static async startTask(taskId: string, captainId: string) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({ where: { id: taskId } });
-
-      if (!task) throw ApiError.notFound("Task not found");
-      if (task.acceptedById !== captainId) {
-        throw ApiError.forbidden("You are not assigned to this task");
-      }
-      if (task.status !== TaskStatus.ACCEPTED) {
-        throw ApiError.badRequest("Task must be in ACCEPTED status to start");
-      }
-
-      return tx.task.update({
-        where: { id: taskId },
-        data: { status: TaskStatus.IN_PROGRESS },
-        include: taskWithUsers,
-      });
-    });
+    return TaskService.transition(taskId, captainId, "CAPTAIN", ["ACCEPTED"], { status: "IN_PROGRESS" }, "STARTED");
   }
 
   /**
@@ -285,7 +288,8 @@ export class TaskService {
     captainId: string,
     input: SubmitTaskInput,
     imagePath: string,
-    evidence?: { data: Buffer; contentType: string }
+    evidence?: { data: Buffer; contentType: string },
+    photos: { data: Buffer; contentType: string; filename: string }[] = []
   ) {
     const task = await prisma.task.findUnique({ where: { id: taskId } });
 
@@ -319,12 +323,13 @@ export class TaskService {
       );
     }
 
-    const save = async (db: Pick<typeof prisma, "task" | "evidence">) => {
+    const save = async (db: Prisma.TransactionClient) => {
       const updated = await db.task.updateMany({
         where: {
           id: taskId,
           acceptedById: captainId,
           status: TaskStatus.IN_PROGRESS,
+          updatedAt: task.updatedAt,
         },
         data: {
           status: TaskStatus.SUBMITTED,
@@ -335,6 +340,8 @@ export class TaskService {
           evidenceSource: input.evidenceSource,
           evidenceCapturedAt: input.evidenceSource === "CAMERA" && input.capturedAt ? new Date(input.capturedAt) : null,
           evidenceSubmittedAt: new Date(),
+          inspectorNotes: input.inspectorNotes || null,
+          revisionNote: null,
         },
       });
 
@@ -350,13 +357,23 @@ export class TaskService {
           update: stored,
         });
       }
+      await db.proofPhoto.deleteMany({ where: { taskId } });
+      if (photos.length) {
+        await db.proofPhoto.createMany({ data: photos.map((photo) => ({
+          taskId, data: new Uint8Array(photo.data), contentType: photo.contentType, filename: photo.filename,
+        })) });
+      }
+      await db.taskEvent.create({ data: {
+        taskId, action: "SUBMITTED", status: "SUBMITTED", actorId: captainId,
+        note: input.inspectorNotes || null,
+      } });
       return db.task.findUniqueOrThrow({
         where: { id: taskId },
         include: taskWithUsers,
       });
     };
     // Photo bytes and the SUBMITTED transition commit together.
-    return evidence ? prisma.$transaction(save) : save(prisma);
+    return prisma.$transaction(save);
   }
 
   /**
@@ -364,22 +381,55 @@ export class TaskService {
    * Wrapped in a transaction to guard against duplicate complete requests.
    */
   static async completeTask(taskId: string, userId: string) {
+    return TaskService.transition(taskId, userId, "USER", ["SUBMITTED"], {
+      status: "COMPLETED", completedAt: new Date(),
+    }, "COMPLETED");
+  }
+
+  static async updateTask(taskId: string, userId: string, input: UpdateTaskInput) {
+    return TaskService.transition(taskId, userId, "USER", ["OPEN"], {
+      title: input.title, description: input.description, targetLat: input.latitude, targetLng: input.longitude,
+    }, "UPDATED");
+  }
+
+  static async cancelTask(taskId: string, userId: string, reason: string) {
+    return TaskService.transition(taskId, userId, "USER", ["OPEN", "ACCEPTED"], {
+      status: "CANCELLED", cancellationReason: reason,
+    }, "CANCELLED", reason);
+  }
+
+  static async releaseTask(taskId: string, captainId: string, reason: string) {
+    return TaskService.transition(taskId, captainId, "CAPTAIN", ["ACCEPTED"], {
+      status: "OPEN", acceptedById: null,
+    }, "RELEASED", reason);
+  }
+
+  static async requestRevision(taskId: string, userId: string, reason: string) {
+    return TaskService.transition(taskId, userId, "USER", ["SUBMITTED"], {
+      status: "IN_PROGRESS", revisionNote: reason,
+    }, "REVISION_REQUESTED", reason);
+  }
+
+  private static async transition(
+    taskId: string, actorId: string, role: "USER" | "CAPTAIN", allowed: TaskStatus[],
+    data: Prisma.TaskUncheckedUpdateManyInput, action: string, note?: string,
+  ) {
     return prisma.$transaction(async (tx) => {
       const task = await tx.task.findUnique({ where: { id: taskId } });
-
-      if (!task) throw ApiError.notFound("Task not found");
-      if (task.createdById !== userId) {
-        throw ApiError.forbidden("Only the task creator can mark it as completed");
+      if (!task) throw ApiError.notFound("Visit not found");
+      if ((role === "USER" ? task.createdById : task.acceptedById) !== actorId) {
+        throw ApiError.forbidden("You do not have permission to change this visit");
       }
-      if (task.status !== TaskStatus.SUBMITTED) {
-        throw ApiError.badRequest("Task must be SUBMITTED to complete");
+      if (!allowed.includes(task.status)) {
+        throw ApiError.conflict("This action is no longer available. Refresh the visit to see its current status.");
       }
-
-      return tx.task.update({
-        where: { id: taskId },
-        data: { status: TaskStatus.COMPLETED },
-        include: taskWithUsers,
+      const updated = await tx.task.updateMany({
+        where: { id: taskId, status: task.status, updatedAt: task.updatedAt }, data,
       });
+      if (!updated.count) throw ApiError.conflict("The visit changed. Refresh and try again.");
+      const result = await tx.task.findUniqueOrThrow({ where: { id: taskId }, include: taskWithUsers });
+      await tx.taskEvent.create({ data: { taskId, action, status: result.status, actorId, note } });
+      return result;
     });
   }
 }

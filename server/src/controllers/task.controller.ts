@@ -5,6 +5,8 @@ import {
   locationUpdateSchema,
   submitTaskSchema,
   taskQuerySchema,
+  taskReasonSchema,
+  updateTaskSchema,
 } from "../validators";
 import { ApiError, resolveGoogleMapsUrl } from "../utils";
 
@@ -15,6 +17,46 @@ function paramId(req: Request): string {
 }
 
 export class TaskController {
+  static async updateTask(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await TaskService.updateTask(paramId(req), req.user!.userId, updateTaskSchema.parse(req.body));
+      res.json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
+  static async cancelTask(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { reason } = taskReasonSchema.parse(req.body);
+      const data = await TaskService.cancelTask(paramId(req), req.user!.userId, reason);
+      res.json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
+  static async releaseTask(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { reason } = taskReasonSchema.parse(req.body);
+      const data = await TaskService.releaseTask(paramId(req), req.user!.userId, reason);
+      res.json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
+  static async requestRevision(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { reason } = taskReasonSchema.parse(req.body);
+      const data = await TaskService.requestRevision(paramId(req), req.user!.userId, reason);
+      res.json({ success: true, data });
+    } catch (error) { next(error); }
+  }
+
+  static async getPhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const photo = await TaskService.getPhoto(paramId(req), String(req.params.photoId), req.user!.userId);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.type(photo.contentType).send(Buffer.from(photo.data));
+    } catch (error) { next(error); }
+  }
+
   static async getLocation(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await TaskService.getLatestLocation(paramId(req), req.user!.userId);
@@ -136,7 +178,9 @@ export class TaskController {
 
   static async submitTask(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!req.file) {
+      const files = req.files as Record<string, Express.Multer.File[]>;
+      const image = files?.image?.[0];
+      if (!image) {
         throw ApiError.badRequest("Evidence image is required");
       }
 
@@ -148,7 +192,8 @@ export class TaskController {
         req.user!.userId,
         input,
         imagePath,
-        { data: req.file.buffer, contentType: req.file.mimetype }
+        { data: image.buffer, contentType: image.mimetype },
+        (files.photos ?? []).map((file) => ({ data: file.buffer, contentType: file.mimetype, filename: file.originalname }))
       );
 
       res.status(200).json({ success: true, data: task });

@@ -2,6 +2,21 @@
 
 Last updated: 7 November 2026
 
+## Workflow update — 10 November 2026
+
+The current checkout adds edit/cancel/release/revision workflows, private supporting
+photos, inspector findings, visit events, account updates, and print/PDF reports.
+Before deploying this version, run the checks in `docs/END_TO_END.md`, generate the
+Prisma client, and apply `202611100001_complete_visit_workflow` to the target
+database. Then deploy API and client together. `npm run db:migrate` at the root
+honours `server/.env.development.local`; set `NODE_ENV=production` and an explicit
+`DATABASE_URL` for the deployment database.
+
+The 4 MB limit now applies to the primary photo plus up to five supporting photos
+combined. Every accepted GPS update is persisted on all hosting environments.
+This checkout was tested locally; the deployment record below describes the
+previously published Vercel build.
+
 ## Current live deployment — Vercel demo
 
 - App: **https://track-proof.vercel.app** (Vercel project `track-proof`, root `client`).

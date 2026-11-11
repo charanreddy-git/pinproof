@@ -12,7 +12,7 @@ import {
   OTP_MAX_SENDS_PER_HOUR,
   OTP_MAX_ATTEMPTS,
 } from "../utils";
-import type { RequestOtpInput, VerifyOtpInput } from "../validators";
+import type { RequestOtpInput, VerifyOtpInput, ProfileInput } from "../validators";
 import { sendOtpSms } from "./sms.service";
 
 const userSelect = {
@@ -33,6 +33,19 @@ function showDevOtp(): boolean {
 }
 
 export class AuthService {
+  static async getProfile(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: userSelect });
+    if (!user) throw ApiError.unauthorized("This account is no longer available. Sign in again.");
+    return user;
+  }
+
+  static async updateProfile(userId: string, input: ProfileInput) {
+    await AuthService.getProfile(userId);
+    return prisma.user.update({ where: { id: userId }, data: {
+      name: input.name, ...(input.email !== undefined ? { email: input.email || null } : {}),
+    }, select: userSelect });
+  }
+
   /**
    * Send a one-time code. The same endpoint handles login and signup so it
    * never reveals whether a phone number is already registered.
@@ -77,8 +90,8 @@ export class AuthService {
     const codeHash = hashOtp(phone, code);
 
     if (existing) {
-      await prisma.phoneOtp.update({
-        where: { phone },
+      const reserved = await prisma.phoneOtp.updateMany({
+        where: { phone, updatedAt: existing.updatedAt },
         data: {
           codeHash,
           expiresAt,
@@ -88,6 +101,7 @@ export class AuthService {
           lastSentAt: now,
         },
       });
+      if (!reserved.count) throw ApiError.tooManyRequests("A code was just requested. Please wait before trying again.");
     } else {
       await prisma.phoneOtp.create({
         data: {
@@ -105,6 +119,10 @@ export class AuthService {
       await sendOtpSms(phone, code);
     } catch (error) {
       logger.error(`Failed to send OTP to ${phone}`, error);
+      await prisma.phoneOtp.updateMany({
+        where: { phone, codeHash },
+        data: { expiresAt: now, lastSentAt: new Date(now.getTime() - OTP_RESEND_SECONDS * 1000) },
+      });
       throw new ApiError(
         502,
         "We could not send the code right now. Please try again in a moment."
@@ -151,9 +169,9 @@ export class AuthService {
 
     if (!otpMatches(phone, input.code, record.codeHash)) {
       const attempts = record.attempts + 1;
-      await prisma.phoneOtp.update({
-        where: { id: record.id },
-        data: { attempts },
+      await prisma.phoneOtp.updateMany({
+        where: { id: record.id, codeHash: record.codeHash, attempts: { lt: OTP_MAX_ATTEMPTS } },
+        data: { attempts: { increment: 1 } },
       });
       const remaining = OTP_MAX_ATTEMPTS - attempts;
       throw ApiError.unauthorized(
@@ -163,27 +181,33 @@ export class AuthService {
       );
     }
 
-    let user = await prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { phone },
       select: userSelect,
     });
-    let isNew = false;
-
-    if (!user) {
-      if (!input.name || !input.role) {
+    if (!existingUser && (!input.name || !input.role)) {
         // The code is valid, but this number has no account yet. Keep the
         // code unconsumed so the client can ask for a name and submit it
         // with the same code. Nothing is created until both are provided.
         logger.info("OTP verified; profile required", { phone });
         return { requiresProfile: true as const, phone };
-      }
+    }
 
-      user = await prisma.user.create({
+    const user = await prisma.$transaction(async (tx) => {
+      // Consume exactly this code, keeping the hourly send window intact.
+      // A concurrent resend, wrong attempt, or verification cannot revive it.
+      const consumed = await tx.phoneOtp.updateMany({
+        where: { id: record.id, codeHash: record.codeHash, expiresAt: { gt: new Date() }, attempts: { lt: OTP_MAX_ATTEMPTS } },
+        data: { expiresAt: now, codeHash: "", attempts: OTP_MAX_ATTEMPTS },
+      });
+      if (!consumed.count) throw ApiError.unauthorized("This code has expired or already been used. Request a new code.");
+
+      if (!existingUser) return tx.user.create({
         data: {
-          name: input.name,
+          name: input.name!,
           phone,
           phoneVerifiedAt: now,
-          role: input.role,
+          role: input.role!,
           captainProfile:
             input.role === "CAPTAIN" ? { create: {} } : undefined,
           requesterProfile:
@@ -191,24 +215,14 @@ export class AuthService {
         },
         select: userSelect,
       });
-      isNew = true;
-    } else if (!user.phoneVerifiedAt) {
-      user = await prisma.user.update({
-        where: { id: user.id },
+      if (!existingUser.phoneVerifiedAt) return tx.user.update({
+        where: { id: existingUser.id },
         data: { phoneVerifiedAt: now },
         select: userSelect,
       });
-    }
-
-    // Delete only once so the same code cannot be replayed.
-    const consumed = await prisma.phoneOtp.deleteMany({
-      where: { id: record.id },
+      return existingUser;
     });
-    if (consumed.count === 0) {
-      throw ApiError.unauthorized(
-        "This code has already been used. Request a new code."
-      );
-    }
+    const isNew = !existingUser;
 
     const token = signToken({
       userId: user.id,

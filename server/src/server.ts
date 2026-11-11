@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./config";
 import http from "http";
 import app from "./app";
 import { prisma } from "./lib";

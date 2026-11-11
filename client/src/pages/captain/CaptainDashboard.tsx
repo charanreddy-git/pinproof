@@ -238,10 +238,10 @@ export function CaptainDashboard() {
   const [isLocating, setIsLocating] = useState(true);
 
   const location = useMemo<Coordinates | undefined>(() => {
-    if (authMode === "demo") return DEMO_CAPTAIN_LOCATION;
     if (latitude !== null && longitude !== null) {
       return { latitude, longitude };
     }
+    if (authMode === "demo") return DEMO_CAPTAIN_LOCATION;
     return undefined;
   }, [latitude, longitude, authMode]);
 
@@ -348,6 +348,11 @@ export function CaptainDashboard() {
       </div>
 
       <div className="mt-4 space-y-5">
+        {location && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-surface-200 bg-white px-4 py-3">
+          <p className="text-sm text-surface-600">{authMode === "demo" && latitude === null ? "Demo search: Whitefield, Bengaluru" : `Searching near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}</p>
+          <Button variant="secondary" size="sm" onClick={() => void requestCurrentLocation()} isLoading={locating}>{latitude === null ? "Use my location" : "Refresh location"}</Button>
+          {locationError && <p role="alert" className="w-full text-sm text-danger-700">{locationError}</p>}
+        </div>}
         {!location ? (
           <LocationCard
             locating={locating}

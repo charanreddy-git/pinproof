@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { TaskController } from "../controllers";
 import { authenticate, authorize, upload } from "../middleware";
+import { validateProofFiles } from "../middleware/upload.middleware";
 
 const router = Router();
 
@@ -27,6 +28,11 @@ router.post(
 );
 
 router.get("/:id/evidence", TaskController.getEvidence);
+router.get("/:id/photos/:photoId", TaskController.getPhoto);
+router.patch("/:id", authorize(["USER"]), TaskController.updateTask);
+router.post("/:id/cancel", authorize(["USER"]), TaskController.cancelTask);
+router.post("/:id/release", authorize(["CAPTAIN"]), TaskController.releaseTask);
+router.post("/:id/revision", authorize(["USER"]), TaskController.requestRevision);
 
 // Get single task
 router.get("/:id", TaskController.getTaskById);
@@ -41,7 +47,8 @@ router.post("/:id/start", authorize(["CAPTAIN"]), TaskController.startTask);
 router.post(
   "/:id/submit",
   authorize(["CAPTAIN"]),
-  upload.single("image"),
+  upload.fields([{ name: "image", maxCount: 1 }, { name: "photos", maxCount: 5 }]),
+  validateProofFiles,
   TaskController.submitTask
 );
 
