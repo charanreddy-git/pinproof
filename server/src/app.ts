@@ -56,6 +56,22 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
+// Readiness checks the columns and tables used by the deployed visit workflow,
+// not just whether PostgreSQL accepts connections.
+app.get("/api/ready", async (_req, res) => {
+  try {
+    await prisma.$queryRawUnsafe(
+      'SELECT "inspectorNotes", "revisionNote", "cancellationReason", "completedAt" FROM "Task" LIMIT 0'
+    );
+    await prisma.$queryRawUnsafe('SELECT "taskId" FROM "TaskEvent" LIMIT 0');
+    await prisma.$queryRawUnsafe('SELECT "taskId" FROM "ProofPhoto" LIMIT 0');
+    res.json({ status: "ok" });
+  } catch (error) {
+    logger.error("Database schema is not ready for this release", error);
+    res.status(503).json({ status: "error", success: false, message: "Database schema is not ready. Apply the pending migrations." });
+  }
+});
+
 app.use("/api", (_req, res) => {
   res.status(404).json({ success: false, message: "API endpoint not found." });
 });

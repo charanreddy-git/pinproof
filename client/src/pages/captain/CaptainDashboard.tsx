@@ -1,5 +1,5 @@
 import { QueryNotice } from "../../components/QueryNotice";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, DashboardSkeleton, useToast } from "../../components";
 import { useAuth } from "../../contexts";
@@ -235,7 +235,7 @@ export function CaptainDashboard() {
   } = useGeolocation();
   const { addToast } = useToast();
   const acceptTask = useAcceptTask();
-  const [isLocating, setIsLocating] = useState(true);
+  const [isLocating, setIsLocating] = useState(false);
 
   const location = useMemo<Coordinates | undefined>(() => {
     if (latitude !== null && longitude !== null) {
@@ -254,15 +254,6 @@ export function CaptainDashboard() {
     }
   }, [requestLocation]);
 
-  const hasRequestedLocation = useRef(false);
-
-  useEffect(() => {
-    if (!authModeReady || authMode === "demo") return;
-    if (hasRequestedLocation.current) return;
-    hasRequestedLocation.current = true;
-    void requestCurrentLocation();
-  }, [authMode, authModeReady, requestCurrentLocation]);
-
   const locating = isLocating && authMode !== "demo";
 
   const {
@@ -271,7 +262,7 @@ export function CaptainDashboard() {
     isError,
     refetch,
     isFetching,
-  } = useTaskList(undefined, location);
+  } = useTaskList(undefined, location, { enabled: authModeReady });
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -349,8 +340,8 @@ export function CaptainDashboard() {
 
       <div className="mt-4 space-y-5">
         {location && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-surface-200 bg-white px-4 py-3">
-          <p className="text-sm text-surface-600">{authMode === "demo" && latitude === null ? "Demo search: Whitefield, Bengaluru" : `Searching near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}</p>
-          <Button variant="secondary" size="sm" onClick={() => void requestCurrentLocation()} isLoading={locating}>{latitude === null ? "Use my location" : "Refresh location"}</Button>
+          <p className="text-sm text-surface-600">{authMode === "demo" && latitude === null ? "Demo search: Whitefield, Bengaluru. Allow location to find work near you." : `Searching near ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}</p>
+          <Button variant="secondary" size="sm" onClick={() => void requestCurrentLocation()} isLoading={locating}>{latitude === null ? "Allow my location" : "Refresh location"}</Button>
           {locationError && <p role="alert" className="w-full text-sm text-danger-700">{locationError}</p>}
         </div>}
         {!location ? (

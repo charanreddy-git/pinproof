@@ -7,7 +7,7 @@ GPS-verified photos, and send back proof — so you can check a property from an
 Built for the Indian market: Google Maps links, ₹ pricing, plot and under-construction
 visits, and mobile-first flows that work on a phone.
 
-**Live demo:** https://track-proof.vercel.app — choose **Continue as Requester** or **Continue as Inspector**. The demo uses shared accounts; phone OTP is disabled. Vercel hosts the frontend and API, with private proof photos persisted in Neon. See the current-deployment section in [DEPLOYMENT.md](DEPLOYMENT.md).
+**Live demo:** https://pinproof.vercel.app — choose **Continue as Requester** or **Continue as Inspector**. The demo uses shared accounts; phone OTP is disabled. Vercel hosts the frontend and API, with private proof photos persisted in Neon. The live deployment currently needs its database migration and API routing update; see [the production audit](docs/PRODUCTION_AUDIT.md) before relying on it.
 
 ---
 

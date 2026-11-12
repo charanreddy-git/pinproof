@@ -15,6 +15,7 @@ import {
 } from "../../components";
 import { useTaskDetail, useSubmitTask } from "../../hooks";
 import { useLiveLocation } from "../../contexts";
+import { isFreshFix, isProofReady } from "../../utils/location-verification";
 
 // Haversine distance (metres) between two coordinates.
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -54,8 +55,8 @@ export function UploadEvidencePage() {
   const [notes, setNotes] = useState("");
 
   // Location
-  const { fix: liveFix, error: locationError, retry: retryLocation } = useLiveLocation();
-  const currentLocation = liveFix
+  const { fix: liveFix, error: locationError, retry: retryLocation, requestAccess, permissionRequested } = useLiveLocation();
+  const currentLocation = isFreshFix(liveFix) && !locationError && liveFix
     ? {
         latitude: liveFix.latitude,
         longitude: liveFix.longitude,
@@ -168,8 +169,8 @@ export function UploadEvidencePage() {
     : null;
 
   const hasAccurateLocation = (proofLocation?.accuracy ?? Infinity) <= 100;
-  const isInRange = !locationError && proofDistance !== null && proofDistance <= 100 && hasAccurateLocation;
-  const locationHint = locationError || (!proofLocation ? "Allow location access to continue." : !hasAccurateLocation ? "GPS accuracy must be within 100 m. Move to an open area and retry location." : "Move within 100 m of the property to submit.");
+  const isInRange = !locationError && isProofReady(liveFix, proofDistance);
+  const locationHint = locationError || (!permissionRequested ? "Allow location to verify that you are at the property." : !proofLocation ? "Waiting for a fresh GPS location. Retry if needed." : !hasAccurateLocation ? "GPS accuracy must be within 100 m. Move to an open area and retry location." : "Move within 100 m of the property to submit.");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -277,9 +278,9 @@ export function UploadEvidencePage() {
     try {
       // The inspector shell keeps one live GPS watch running; the most recent
       // fix is the submission location.
-      const finalLocation = currentLocation;
-      if (!finalLocation) {
-        throw new Error("Waiting for your GPS location. Move to an open area and retry.");
+      const finalLocation = liveFix;
+      if (!finalLocation || !isFreshFix(finalLocation) || locationError) {
+        throw new Error("A fresh GPS fix is required. Allow location or retry before submitting.");
       }
       if ((finalLocation.accuracy ?? Infinity) > 100 || calculateDistance(task.targetLat, task.targetLng, finalLocation.latitude, finalLocation.longitude) > 100) {
         throw new Error("Your current GPS must be within 100 m of the pin, with accuracy of 100 m or better.");
@@ -362,6 +363,12 @@ export function UploadEvidencePage() {
             <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-danger-200 bg-danger-50 p-3">
               <AlertTriangleIcon size={15} className="mt-0.5 flex-shrink-0 text-danger-600" />
               <div><p className="text-[14px] font-medium leading-relaxed text-danger-700">{locationError}</p><Button variant="secondary" size="sm" className="mt-2" onClick={() => retryLocation()}>Retry location</Button></div>
+            </div>
+          ) : !permissionRequested ? (
+            <div className="mt-3 rounded-xl border border-primary-200 bg-primary-50 p-3">
+              <p className="text-sm font-semibold text-primary-900">Verify your location at the property</p>
+              <p className="mt-1 text-sm text-primary-800">We ask for your device location to check the 100 m proof zone. A fresh, accurate GPS fix is required before submission.</p>
+              <Button type="button" size="sm" className="mt-3" onClick={requestAccess}>Allow location</Button>
             </div>
           ) : !currentLocation ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-50 p-3">

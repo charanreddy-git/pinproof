@@ -1,5 +1,19 @@
 # PinProof Deployment Guide
 
+> **Current root-project release (November 2026):** The canonical origin is
+> `https://pinproof.vercel.app`. The separate `pinproof-api.vercel.app` host in the
+> historical instructions below is retired. The root `vercel.json` routes all
+> `/api/*` calls to a single Express function; do not configure `client` as the
+> Vercel project root for this release.
+>
+> Before deploying, run `npm run check` and apply checked-in migrations to the
+> exact production database with `NODE_ENV=production DATABASE_URL=... npm run db:migrate`.
+> Inspect `npx prisma migrate status` using that same database first, and back up
+> production data before migrating. Deploy a preview and run
+> `npm run smoke:deployment -- https://<preview-origin>`; `/api/ready` must be
+> 200, and protected detail/nested routes must return JSON 401, not platform 404.
+> Do not deploy a client expecting new columns before the migration succeeds.
+
 Last updated: 7 November 2026
 
 ## Workflow update — 10 November 2026

@@ -12,10 +12,16 @@ import {
   changeTask,
 } from "../services/task.service";
 import type { Coordinates, CreateTaskInput, UpdateTaskInput } from "../types";
+import { ApiError } from "../services/api-response";
 
 // HTTP polling replaces the previous real-time socket updates.
 const TASK_LIST_POLL_INTERVAL_MS = 15_000;
 const TASK_DETAIL_POLL_INTERVAL_MS = 5_000;
+
+function pollingInterval(base: number, error: unknown, failures: number): number | false {
+  if (error instanceof ApiError && [401, 403, 404].includes(error.response.status)) return false;
+  return error ? Math.min(60_000, base * 2 ** Math.min(failures, 4)) : base;
+}
 
 export function useTaskList(
   filter?: string,
@@ -33,7 +39,8 @@ export function useTaskList(
     ],
     queryFn: () => fetchTasks(filter, location),
     enabled: !!user && (options?.enabled ?? true),
-    refetchInterval: TASK_LIST_POLL_INTERVAL_MS,
+    retry: (count, error) => !(error instanceof ApiError && error.response.status < 500 && error.response.status >= 400) && count < 1,
+    refetchInterval: (query) => pollingInterval(TASK_LIST_POLL_INTERVAL_MS, query.state.error, query.state.fetchFailureCount),
     refetchIntervalInBackground: false,
   });
 }
@@ -44,10 +51,11 @@ export function useTaskDetail(id: string) {
     queryKey: ["task", id, user?.id],
     queryFn: () => fetchTaskById(id),
     enabled: !!id && !!user,
+    retry: (count, error) => !(error instanceof ApiError && error.response.status < 500 && error.response.status >= 400) && count < 1,
     refetchInterval: (query) =>
       ["COMPLETED", "CANCELLED"].includes(query.state.data?.status ?? "")
         ? false
-        : TASK_DETAIL_POLL_INTERVAL_MS,
+        : pollingInterval(TASK_DETAIL_POLL_INTERVAL_MS, query.state.error, query.state.fetchFailureCount),
     refetchIntervalInBackground: false,
   });
 }
